@@ -4,8 +4,16 @@
 #include <string.h>
 #include "parser/parser.h"
 #include "tokenizer/tokenizer.h"
+#include <regex.h>
 
 char* read_file_content(char* file)  {
+  regex_t my_reg;
+  int value = regcomp(&my_reg, "\\.duck$", 0);
+  value = regexec(&my_reg, file, 0, NULL, 0);
+  if (value == REG_NOMATCH)  {
+    fprintf(stderr, "ERROR: invalid file provided!\n");
+    exit(-1);
+  }
   FILE* f1 = fopen(file, "r");
   if (f1 == NULL)  {
     return NULL;

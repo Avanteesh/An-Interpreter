@@ -82,7 +82,7 @@ typedef struct {
     VariableDec* var_declaration;
     AssignmentExpr* assignment_exp;
   } value;
-} Module;
+} Instruction;
 
 AssignmentExpr* create_assignment_expr();
 NamedExpr* create_named_expr(char* name);

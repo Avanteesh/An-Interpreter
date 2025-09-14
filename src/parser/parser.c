@@ -106,6 +106,7 @@ void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Opera
   } else if (first->p_tokens == NAMED_EXP) {
    exp_obj->value.binary_exp->right->value.named_expr = first->value.named_expr;
   } else if (first->p_tokens == UNARY_EXP)  {
+   printf("109: %ld\n", *stack_top);
    exp_obj->value.binary_exp->right->value.unary_exp = first->value.unary_exp;
   }
   expr_stack[++(*stack_top)] = exp_obj;
@@ -156,14 +157,29 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
       stack_top--;
       (*index)++;
     } else {
-       if (stack_top != -1) {
-         uint64_t first = operator_precedance(lexeme_list[*index]->lexeme_type);
-         while ((stack_top != -1) && 
-           first <= operator_precedance(stack[stack_top]->lexeme_type) &&
-	   stack[stack_top]->lexeme_type != LEFT_BRACE)   {
-           post_exp[++post_top] = stack[stack_top--];
-         }
+       if (lexeme_list[*index]->lexeme_type == PLUS_OP)  {
+         if (lexeme_list[(*index) - 1]->lexeme_type != NUMBER &&
+	   lexeme_list[(*index) - 1]->lexeme_type != NAMED_LEXEME)  {
+           lexeme_list[*index]->lexeme_type = UNARY_PLUS_OP;
+	 }
        }
+       else if (lexeme_list[*index]->lexeme_type == MINUS_OP)  {
+	 if (lexeme_list[(*index) - 1]->lexeme_type != NUMBER &&
+	   lexeme_list[(*index) - 1]->lexeme_type != NAMED_LEXEME) {
+	   lexeme_list[*index]->lexeme_type = UNARY_MINUS_OP;
+	 }
+       }
+       if (lexeme_list[*index]->lexeme_type != UNARY_MINUS_OP 
+	 || lexeme_list[*index]->lexeme_type != UNARY_PLUS_OP) {
+        if (stack_top != -1)  {
+          uint64_t first = operator_precedance(lexeme_list[*index]->lexeme_type);
+          while ((stack_top != -1) && 
+            first <= operator_precedance(stack[stack_top]->lexeme_type) &&
+	    stack[stack_top]->lexeme_type != LEFT_BRACE)   {
+            post_exp[++post_top] = stack[stack_top--];
+          }
+	}
+      }
       stack[++stack_top] = lexeme_list[(*index)++];
     }
   }
@@ -172,6 +188,7 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   free(stack);
   Expr** expr_stack = malloc(sizeof(Expr*)*post_top);
   for (uint64_t i = 0; i <= post_top; i++)   {
+    printf("i = %ld, token = %d\n", i, post_exp[i]->lexeme_type);
     Expr* exp_obj = (Expr*)malloc(sizeof(Expr));
     if (post_exp[i]->lexeme_type == NUMBER || post_exp[i]->lexeme_type == STRING_LITERAL) {
      exp_obj->p_tokens = (post_exp[i]->lexeme_type == NUMBER)? _NUMBER:STRING;
@@ -201,6 +218,10 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
       parse_exp_binary(expr_stack, &stack_top, exp_obj, MODULO);
     } else if (post_exp[i]->lexeme_type == UNARY_FLIP_OP)  {
       parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_FLIP);
+    } else if (post_exp[i]->lexeme_type == UNARY_PLUS_OP)  {
+      parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_PLUS);
+    } else if (post_exp[i]->lexeme_type == UNARY_MINUS_OP)  {
+      parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_MINUS);
     }
   }
   Expr* exp_obj = expr_stack[stack_top--];
@@ -208,8 +229,7 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   return exp_obj;
 }
 
-static VariableDec* parse_variable_dec(Lexeme** lexeme_list, uint64_t top,uint64_t *index,
- bool is_assignment_exp)  {
+VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *index,bool is_assignment_exp)  {
    *(index) = (is_assignment_exp)?(*index)+1:(*index);
    NamedExpr* named_expr = create_named_expr(lexeme_list[(*index)]->content);
    VariableDec* var_dec = create_variable_dec();
@@ -225,19 +245,19 @@ static VariableDec* parse_variable_dec(Lexeme** lexeme_list, uint64_t top,uint64
 }
 
 void parse(Lexeme** lexeme_list, uint64_t top)  {
-  Module** module = (Module**)malloc(sizeof(Module*)*top);
+  Instruction** module = (Instruction**)malloc(sizeof(Instruction*)*top);
   uint64_t m_top = -1;
   for (uint64_t i = 0; i < top; i++)  {
     if (lexeme_list[i]->lexeme_type == RESERVED_WORD) {
       if (strcmp(lexeme_list[i]->content, RESERVED_WORD_VAR) == 0) {
        VariableDec* var_dec = parse_variable_dec(lexeme_list, top, &i, true);
-       module[++m_top] = (Module*)malloc(sizeof(Module));
+       module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
        module[m_top]->expression_type = VARIABLE_DEC;
        module[m_top]->value.var_declaration = var_dec;
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_CONST) == 0)  {
        VariableDec* const_dec = parse_variable_dec(lexeme_list, top, &i, true);
        const_dec->is_constant = true;
-       module[++m_top] = (Module*)malloc(sizeof(Module));
+       module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
        module[m_top]->expression_type = CONSTANT_DEC;  // CONSTANT declaration
        module[m_top]->value.var_declaration = const_dec;
       } 
@@ -249,15 +269,13 @@ void parse(Lexeme** lexeme_list, uint64_t top)  {
         assignment_exp->target = var_dec->target;
         assignment_exp->value = var_dec->value;
         free(var_dec);
-        module[++m_top] = (Module*)malloc(sizeof(Module));
+        module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
         module[m_top]->expression_type = ASSIGNMENT_EXP;
         module[m_top]->value.assignment_exp = assignment_exp;
-       }
-       else if (lexeme_list[i+1]->lexeme_type == LEFT_BRACE)  {
-         // function call!
        }
      }
    }
   }
+  printf("%s\n", module[m_top]->value.var_declaration->value->value.binary_exp->right->value.constant_obj.value);
 }
 
