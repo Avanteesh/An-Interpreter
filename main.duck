@@ -1,0 +1,4 @@
+var myNum <- ~(35/5) ^ (12 - 7);
+const PI <- 3.1415;
+myNum <- myNum - 10;
+
