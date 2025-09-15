@@ -18,13 +18,17 @@ char* read_file_content(char* file)  {
   if (f1 == NULL)  {
     return NULL;
   }
-  char *buffer = (char*)malloc(sizeof(char*));
-  char ch;
-  do {
-    ch = fgetc(f1);
-    char next[] = {ch, '\0'};
-    strcat(buffer, (char*)next);
-  } while (ch != EOF);
+  char *buffer = (char*)malloc(sizeof(char));
+  fseek(f1, 0, SEEK_END);
+  uint64_t length = ftell(f1);
+  rewind(f1);
+  if (buffer == NULL)  {
+   fprintf(stderr, "failed to read file! recompile!");
+   exit(-1);
+  }
+  size_t size = fread(buffer, 1, length, f1);
+  buffer[size] = '\0';
+  fclose(f1);
   return buffer;
 }
 

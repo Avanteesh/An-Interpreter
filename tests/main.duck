@@ -1,0 +1,10 @@
+var myNum <- ~(35/5) ^ (12 - 7); 
+(*
+  This is a multiline comment!
+*)
+const PI <- 3.1415;
+myNum <- myNum mod 10;  $ this is also a comment!
+var name <- "Avanteesh";
+const test_var <- true;
+var res2 <- not test_var;
+

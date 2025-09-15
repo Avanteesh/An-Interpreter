@@ -11,19 +11,24 @@ typedef enum {
   NAMED_LEXEME, LEFT_BRACE, 
   RIGHT_BRACE, FLOOR_DIV_OP,
   LINE_END,UNARY_PLUS_OP,
-  UNARY_MINUS_OP
+  UNARY_MINUS_OP, LOG_AND_OP,
+  LOG_OR_OP, LOG_NOT_OP,
+  LOG_XOR_OP, BIT_AND_OP,
+  BIT_OR_OP,BIT_XOR_OP,
+  ARITH_LSHIFT, ARITH_RSHIFT
 } Tokens;
 
 
 // reserved word
 #define RESERVED_WORD_VAR "var"
 #define RESERVED_WORD_CONST "const"
-#define RESERVED_WORD_TRUE "true"
-#define RESERVED_WORD_FALSE "false"
 #define RESERVED_WORD_NULL "Null"
 
 #define NAMED_OPERATOR_MODULO "mod"
 #define NAMED_OPERATOR_AND "and"
+#define NAMED_OPERATOR_OR "or"
+#define NAMED_OPERATOR_NOT "not"
+#define NAMED_OPERATOR_XOR "xor"
 
 #endif
 

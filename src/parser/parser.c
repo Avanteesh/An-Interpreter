@@ -72,15 +72,26 @@ VariableDec* create_variable_dec()  {
 }
 
 uint64_t operator_precedance(Tokens token)   {
-  if (token == POWER_OP)  return 3;
-  else if (token == UNARY_PLUS_OP || token == UNARY_MINUS_OP || token == UNARY_FLIP_OP) return 4;
-  else if (token == PRODUCT_OP || token == DIVIDE_OP || token == FLOOR_DIV_OP 
-    || token == MODULUS_OP)  return 2;
-  else if (token == PLUS_OP || token == MINUS_OP) return 1;
-  return -1;
+  switch(token)  {
+    case POWER_OP: return 12;
+    case UNARY_PLUS_OP: case UNARY_MINUS_OP: 
+    case UNARY_FLIP_OP: return 11;
+    case PRODUCT_OP : case DIVIDE_OP: 
+    case MODULUS_OP: case FLOOR_DIV_OP: return 10;
+    case PLUS_OP: case MINUS_OP: return 9;
+    case ARITH_LSHIFT: case ARITH_RSHIFT: return 8;
+    case BIT_AND_OP: return 7;
+    case BIT_XOR_OP: return 6;
+    case BIT_OR_OP: return 5;
+    case LOG_NOT_OP: return 4;
+    case LOG_AND_OP: return 3;
+    case LOG_XOR_OP: return 2;
+    case LOG_OR_OP: return 1;
+    default: return 0;
+  } 
 }
 
-void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Operators op)  { 
+void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Operators op)  {
   Expr *first = expr_stack[(*stack_top)], *second = expr_stack[(*stack_top)-1];
   expr_stack[(*stack_top)--] = NULL;
   expr_stack[(*stack_top)--] = NULL; 
@@ -106,7 +117,6 @@ void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Opera
   } else if (first->p_tokens == NAMED_EXP) {
    exp_obj->value.binary_exp->right->value.named_expr = first->value.named_expr;
   } else if (first->p_tokens == UNARY_EXP)  {
-   printf("109: %ld\n", *stack_top);
    exp_obj->value.binary_exp->right->value.unary_exp = first->value.unary_exp;
   }
   expr_stack[++(*stack_top)] = exp_obj;
@@ -136,8 +146,8 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   Lexeme** post_exp = malloc(sizeof(Lexeme*)*top);
   uint64_t stack_top = -1, post_top = -1;
   while (true)  {
-    if (lexeme_list[*index]->lexeme_type == SEMICOLON 
-	|| lexeme_list[*index]->lexeme_type == LINE_END)  {
+    if (lexeme_list[*index]->lexeme_type == SEMICOLON || 
+	lexeme_list[*index]->lexeme_type == LINE_END)  {
        break;
     }
     else if (lexeme_list[*index]->lexeme_type == NUMBER ||
@@ -160,17 +170,23 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
        if (lexeme_list[*index]->lexeme_type == PLUS_OP)  {
          if (lexeme_list[(*index) - 1]->lexeme_type != NUMBER &&
 	   lexeme_list[(*index) - 1]->lexeme_type != NAMED_LEXEME)  {
-           lexeme_list[*index]->lexeme_type = UNARY_PLUS_OP;
+	   if (lexeme_list[(*index) - 1]->lexeme_type == LEFT_BRACE ||
+		lexeme_list[(*index) - 1]->lexeme_type == ASSIGNMENT_OP)  {
+             lexeme_list[*index]->lexeme_type = UNARY_PLUS_OP;
+	   }
 	 }
        }
        else if (lexeme_list[*index]->lexeme_type == MINUS_OP)  {
 	 if (lexeme_list[(*index) - 1]->lexeme_type != NUMBER &&
-	   lexeme_list[(*index) - 1]->lexeme_type != NAMED_LEXEME) {
-	   lexeme_list[*index]->lexeme_type = UNARY_MINUS_OP;
+	   lexeme_list[(*index) - 1]->lexeme_type != NAMED_LEXEME)  {
+	   if (lexeme_list[(*index) - 1]->lexeme_type == LEFT_BRACE || 
+		lexeme_list[(*index) - 1]->lexeme_type == ASSIGNMENT_OP)  {
+	     lexeme_list[*index]->lexeme_type = UNARY_MINUS_OP;
+	   }
 	 }
        }
-       if (lexeme_list[*index]->lexeme_type != UNARY_MINUS_OP 
-	 || lexeme_list[*index]->lexeme_type != UNARY_PLUS_OP) {
+       if (!(lexeme_list[*index]->lexeme_type == UNARY_MINUS_OP 
+	 || lexeme_list[*index]->lexeme_type == UNARY_PLUS_OP)) {
         if (stack_top != -1)  {
           uint64_t first = operator_precedance(lexeme_list[*index]->lexeme_type);
           while ((stack_top != -1) && 
@@ -188,40 +204,59 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   free(stack);
   Expr** expr_stack = malloc(sizeof(Expr*)*post_top);
   for (uint64_t i = 0; i <= post_top; i++)   {
-    printf("i = %ld, token = %d\n", i, post_exp[i]->lexeme_type);
     Expr* exp_obj = (Expr*)malloc(sizeof(Expr));
-    if (post_exp[i]->lexeme_type == NUMBER || post_exp[i]->lexeme_type == STRING_LITERAL) {
-     exp_obj->p_tokens = (post_exp[i]->lexeme_type == NUMBER)? _NUMBER:STRING;
-     exp_obj->value.constant_obj.value = (char*)malloc(sizeof(char)*strlen(post_exp[i]->content));
-     strcpy(exp_obj->value.constant_obj.value, post_exp[i]->content);
-     expr_stack[++stack_top] = exp_obj;
-    } else if (post_exp[i]->lexeme_type == NAMED_LEXEME)  {
-      exp_obj->p_tokens = NAMED_EXP;
-      exp_obj->value.named_expr.var_name = (char*)malloc(
-	sizeof(char)*strlen(post_exp[i]->content));
-      strcpy(exp_obj->value.named_expr.var_name, post_exp[i]->content);
-      expr_stack[++stack_top] = exp_obj;
-    }
-     else if (post_exp[i]->lexeme_type == PLUS_OP)  {
-      parse_exp_binary(expr_stack, &stack_top, exp_obj, PLUS);
-    } else if (post_exp[i]->lexeme_type == PRODUCT_OP)  {  
-      parse_exp_binary(expr_stack, &stack_top, exp_obj, MULTIPLY);
-    } else if (post_exp[i]->lexeme_type == DIVIDE_OP)  {
-      parse_exp_binary(expr_stack, &stack_top, exp_obj, DIVIDE);
-    } else if (post_exp[i]->lexeme_type == MINUS_OP)  {
-      parse_exp_binary(expr_stack, &stack_top, exp_obj, MINUS);
-    } else if (post_exp[i]->lexeme_type == POWER_OP)  {
-      parse_exp_binary(expr_stack, &stack_top, exp_obj, POWER);
-    } else if (post_exp[i]->lexeme_type == FLOOR_DIV_OP)  {
-      parse_exp_binary(expr_stack, &stack_top, exp_obj, FLOOR_DIVISION);
-    } else if (post_exp[i]->lexeme_type == MODULUS_OP)  {
-      parse_exp_binary(expr_stack, &stack_top, exp_obj, MODULO);
-    } else if (post_exp[i]->lexeme_type == UNARY_FLIP_OP)  {
-      parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_FLIP);
-    } else if (post_exp[i]->lexeme_type == UNARY_PLUS_OP)  {
-      parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_PLUS);
-    } else if (post_exp[i]->lexeme_type == UNARY_MINUS_OP)  {
-      parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_MINUS);
+    switch(post_exp[i]->lexeme_type)  {
+	case NUMBER: case STRING_LITERAL:
+         exp_obj->p_tokens = (post_exp[i]->lexeme_type == NUMBER)? _NUMBER:STRING;
+         exp_obj->value.constant_obj.value = (char*)malloc(sizeof(char)*strlen(post_exp[i]->content));
+         strcpy(exp_obj->value.constant_obj.value, post_exp[i]->content);
+         expr_stack[++stack_top] = exp_obj;
+	 break;
+        case NAMED_LEXEME:
+         exp_obj->p_tokens = NAMED_EXP;
+         exp_obj->value.named_expr.var_name = (char*)malloc(
+	    sizeof(char)*strlen(post_exp[i]->content));
+         strcpy(exp_obj->value.named_expr.var_name, post_exp[i]->content);
+         expr_stack[++stack_top] = exp_obj;
+	 break;
+        case PLUS_OP:
+          parse_exp_binary(expr_stack, &stack_top, exp_obj, PLUS); break;
+	case PRODUCT_OP:
+          parse_exp_binary(expr_stack, &stack_top, exp_obj, MULTIPLY); break;
+        case DIVIDE_OP:
+          parse_exp_binary(expr_stack, &stack_top, exp_obj, DIVIDE); break;
+        case MINUS_OP:
+          parse_exp_binary(expr_stack, &stack_top, exp_obj, MINUS); break;
+	case POWER_OP:
+          parse_exp_binary(expr_stack, &stack_top, exp_obj, POWER); break;
+	case FLOOR_DIV_OP:
+          parse_exp_binary(expr_stack, &stack_top, exp_obj, FLOOR_DIVISION); break;
+	case MODULUS_OP:
+          parse_exp_binary(expr_stack, &stack_top, exp_obj, MODULO); break;
+        case UNARY_FLIP_OP:
+          parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_FLIP); break;
+        case UNARY_PLUS_OP:
+          parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_PLUS); break;
+        case UNARY_MINUS_OP:
+          parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_MINUS); break;
+        case LOG_NOT_OP: 
+         parse_exp_unary(expr_stack, &stack_top, exp_obj, LOGICAL_NOT); break;
+        case LOG_AND_OP:
+         parse_exp_binary(expr_stack, &stack_top, exp_obj, LOGICAL_AND); break;
+        case LOG_OR_OP:
+         parse_exp_binary(expr_stack, &stack_top, exp_obj, LOGICAL_OR); break;
+        case LOG_XOR_OP:
+         parse_exp_binary(expr_stack, &stack_top, exp_obj, LOGICAL_XOR); break;
+        case BIT_AND_OP:
+         parse_exp_binary(expr_stack, &stack_top, exp_obj, BITWISE_AND); break;
+        case BIT_OR_OP:
+         parse_exp_binary(expr_stack, &stack_top, exp_obj, BITWISE_OR); break;
+        case BIT_XOR_OP:
+         parse_exp_binary(expr_stack, &stack_top, exp_obj, BITWISE_XOR); break;
+        case ARITH_LSHIFT:
+         parse_exp_binary(expr_stack, &stack_top, exp_obj, ARITHMATIC_LSHIFT); break;
+        case ARITH_RSHIFT:
+         parse_exp_binary(expr_stack, &stack_top, exp_obj, ARITHMATIC_RSHIFT); break;
     }
   }
   Expr* exp_obj = expr_stack[stack_top--];
@@ -261,14 +296,18 @@ void parse(Lexeme** lexeme_list, uint64_t top)  {
        module[m_top]->expression_type = CONSTANT_DEC;  // CONSTANT declaration
        module[m_top]->value.var_declaration = const_dec;
       } 
-    }  else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
+    }  
+    else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
      if (i+1 < top)  {
        if (lexeme_list[i+1]->lexeme_type == ASSIGNMENT_OP)  {
+	// create variable declaration instance, then !
         VariableDec* var_dec = parse_variable_dec(lexeme_list, top, &i, false);
         AssignmentExpr* assignment_exp = create_assignment_expr();
-        assignment_exp->target = var_dec->target;
-        assignment_exp->value = var_dec->value;
-        free(var_dec);
+	assignment_exp->target = create_named_expr(var_dec->target->var_name);
+	assignment_exp->value = (Expr*)malloc(sizeof(Expr));
+	assignment_exp->value->p_tokens = var_dec->value->p_tokens;
+        assignment_exp->value->value = var_dec->value->value;
+	free(var_dec);
         module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
         module[m_top]->expression_type = ASSIGNMENT_EXP;
         module[m_top]->value.assignment_exp = assignment_exp;
@@ -276,6 +315,5 @@ void parse(Lexeme** lexeme_list, uint64_t top)  {
      }
    }
   }
-  printf("%s\n", module[m_top]->value.var_declaration->value->value.binary_exp->right->value.constant_obj.value);
 }
 
