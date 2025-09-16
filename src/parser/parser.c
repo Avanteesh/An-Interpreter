@@ -73,16 +73,19 @@ VariableDec* create_variable_dec()  {
 
 uint64_t operator_precedance(Tokens token)   {
   switch(token)  {
-    case POWER_OP: return 12;
+    case POWER_OP: return 13;
     case UNARY_PLUS_OP: case UNARY_MINUS_OP: 
-    case UNARY_FLIP_OP: return 11;
+    case UNARY_FLIP_OP: return 12;
     case PRODUCT_OP : case DIVIDE_OP: 
-    case MODULUS_OP: case FLOOR_DIV_OP: return 10;
-    case PLUS_OP: case MINUS_OP: return 9;
-    case ARITH_LSHIFT: case ARITH_RSHIFT: return 8;
-    case BIT_AND_OP: return 7;
-    case BIT_XOR_OP: return 6;
-    case BIT_OR_OP: return 5;
+    case MODULUS_OP: case FLOOR_DIV_OP: return 11;
+    case PLUS_OP: case MINUS_OP: return 10;
+    case ARITH_LSHIFT: case ARITH_RSHIFT: return 9;
+    case BIT_AND_OP: return 8;
+    case BIT_XOR_OP: return 7;
+    case BIT_OR_OP: return 6;
+    case GREATER_THAN_OP: case LESS_THAN_OP:
+    case GREATER_THAN_OR_EQUAL_OP: case LESS_THAN_OR_EQUAL_OP:
+    case EQUALITY_OP: case NOT_EQUAL_OP: return 5;
     case LOG_NOT_OP: return 4;
     case LOG_AND_OP: return 3;
     case LOG_XOR_OP: return 2;
@@ -220,43 +223,55 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
          expr_stack[++stack_top] = exp_obj;
 	 break;
         case PLUS_OP:
-          parse_exp_binary(expr_stack, &stack_top, exp_obj, PLUS); break;
+          parse_exp_binary(expr_stack,&stack_top,exp_obj,PLUS); break;
 	case PRODUCT_OP:
-          parse_exp_binary(expr_stack, &stack_top, exp_obj, MULTIPLY); break;
+          parse_exp_binary(expr_stack,&stack_top,exp_obj,MULTIPLY); break;
         case DIVIDE_OP:
-          parse_exp_binary(expr_stack, &stack_top, exp_obj, DIVIDE); break;
+          parse_exp_binary(expr_stack,&stack_top,exp_obj,DIVIDE); break;
         case MINUS_OP:
-          parse_exp_binary(expr_stack, &stack_top, exp_obj, MINUS); break;
+          parse_exp_binary(expr_stack,&stack_top,exp_obj,MINUS); break;
 	case POWER_OP:
-          parse_exp_binary(expr_stack, &stack_top, exp_obj, POWER); break;
+          parse_exp_binary(expr_stack,&stack_top,exp_obj,POWER); break;
 	case FLOOR_DIV_OP:
-          parse_exp_binary(expr_stack, &stack_top, exp_obj, FLOOR_DIVISION); break;
+          parse_exp_binary(expr_stack,&stack_top,exp_obj,FLOOR_DIVISION); break;
 	case MODULUS_OP:
-          parse_exp_binary(expr_stack, &stack_top, exp_obj, MODULO); break;
+          parse_exp_binary(expr_stack,&stack_top,exp_obj,MODULO); break;
         case UNARY_FLIP_OP:
-          parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_FLIP); break;
+          parse_exp_unary(expr_stack,&stack_top,exp_obj,UNARY_FLIP); break;
         case UNARY_PLUS_OP:
-          parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_PLUS); break;
+          parse_exp_unary(expr_stack,&stack_top,exp_obj,UNARY_PLUS); break;
         case UNARY_MINUS_OP:
-          parse_exp_unary(expr_stack, &stack_top, exp_obj, UNARY_MINUS); break;
+          parse_exp_unary(expr_stack,&stack_top,exp_obj,UNARY_MINUS); break;
         case LOG_NOT_OP: 
-         parse_exp_unary(expr_stack, &stack_top, exp_obj, LOGICAL_NOT); break;
+         parse_exp_unary(expr_stack,&stack_top,exp_obj,LOGICAL_NOT); break;
         case LOG_AND_OP:
-         parse_exp_binary(expr_stack, &stack_top, exp_obj, LOGICAL_AND); break;
+         parse_exp_binary(expr_stack,&stack_top,exp_obj,LOGICAL_AND); break;
         case LOG_OR_OP:
-         parse_exp_binary(expr_stack, &stack_top, exp_obj, LOGICAL_OR); break;
+         parse_exp_binary(expr_stack,&stack_top,exp_obj,LOGICAL_OR); break;
         case LOG_XOR_OP:
-         parse_exp_binary(expr_stack, &stack_top, exp_obj, LOGICAL_XOR); break;
+         parse_exp_binary(expr_stack,&stack_top,exp_obj,LOGICAL_XOR); break;
         case BIT_AND_OP:
-         parse_exp_binary(expr_stack, &stack_top, exp_obj, BITWISE_AND); break;
+         parse_exp_binary(expr_stack,&stack_top,exp_obj,BITWISE_AND); break;
         case BIT_OR_OP:
-         parse_exp_binary(expr_stack, &stack_top, exp_obj, BITWISE_OR); break;
+         parse_exp_binary(expr_stack,&stack_top,exp_obj,BITWISE_OR); break;
         case BIT_XOR_OP:
-         parse_exp_binary(expr_stack, &stack_top, exp_obj, BITWISE_XOR); break;
+         parse_exp_binary(expr_stack,&stack_top,exp_obj,BITWISE_XOR); break;
         case ARITH_LSHIFT:
-         parse_exp_binary(expr_stack, &stack_top, exp_obj, ARITHMATIC_LSHIFT); break;
+         parse_exp_binary(expr_stack,&stack_top,exp_obj,ARITHMATIC_LSHIFT); break;
         case ARITH_RSHIFT:
-         parse_exp_binary(expr_stack, &stack_top, exp_obj, ARITHMATIC_RSHIFT); break;
+         parse_exp_binary(expr_stack,&stack_top,exp_obj,ARITHMATIC_RSHIFT); break;
+	case GREATER_THAN_OP:
+	 parse_exp_binary(expr_stack,&stack_top,exp_obj,GREATER_THAN); break;
+	case LESS_THAN_OP:
+	 parse_exp_binary(expr_stack,&stack_top,exp_obj,LESS_THAN); break;
+	case GREATER_THAN_OR_EQUAL_OP:
+	 parse_exp_binary(expr_stack,&stack_top,exp_obj,GREATER_THAN_OR_EQUAL); break;
+	case LESS_THAN_OR_EQUAL_OP:
+	 parse_exp_binary(expr_stack,&stack_top,exp_obj,LESS_THAN_OR_EQUAL);break;
+	case EQUALITY_OP:
+	 parse_exp_binary(expr_stack,&stack_top,exp_obj,BANG_EQUALITY); break;
+	case NOT_EQUAL_OP:
+	 parse_exp_binary(expr_stack,&stack_top,exp_obj,NOT_EQUALITY); break;
     }
   }
   Expr* exp_obj = expr_stack[stack_top--];

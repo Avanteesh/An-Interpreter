@@ -6,10 +6,11 @@
 #include <stdbool.h> 
 
 typedef struct Expression Expr;
+typedef struct DynamicListExpr DynamicList;
 
 typedef enum {
   PLUS, MINUS, 
-  MULTIPLY,
+  MULTIPLY, 
   DIVIDE, POWER, MODULO,
   FLOOR_DIVISION,
   UNARY_PLUS, UNARY_MINUS,
@@ -18,7 +19,11 @@ typedef enum {
   LOGICAL_NOT,BITWISE_AND,
   BITWISE_OR,BITWISE_XOR,
   ARITHMATIC_LSHIFT,
-  ARITHMATIC_RSHIFT
+  ARITHMATIC_RSHIFT,
+  GREATER_THAN,LESS_THAN,
+  GREATER_THAN_OR_EQUAL,
+  LESS_THAN_OR_EQUAL,
+  BANG_EQUALITY,NOT_EQUALITY
 } Operators;
 
 typedef enum {
@@ -30,7 +35,8 @@ typedef enum {
   UNARY_EXP,
   NAMED_EXP,
   EXPR, _NUMBER,
-  STRING, BOOL
+  STRING, BOOL,
+  DYNAMIC_LIST
 } ParsedToken;
 
 typedef enum {
@@ -51,12 +57,12 @@ typedef struct {
  Operators operation;
  Expr* left;
  Expr* right;
-} BinaryExpression;
+} BinaryExpression;  // binary expression (can be arithmatic or boolean!)
 
 typedef struct {
   Operators operation;
   Expr* operand;
-} UnaryExpression;
+} UnaryExpression;  // unary operations!
 
 typedef struct {
   bool is_constant;  // a variable declaration is constant if true!
@@ -69,6 +75,19 @@ typedef struct {
   Expr* value;
 } AssignmentExpr;
 
+typedef struct {
+  ParsedToken p_tokens;
+  union {
+    DynamicList* dynamic_list;
+    Expr* expression;
+  } values;
+} ArgumentList;
+
+typedef struct DynamicListExpr {
+  uint64_t list_length;
+  ArgumentList** arg_list;
+} DynamicList;   // representation of List data structure!
+
 typedef struct Expression {
   ParsedToken p_tokens;
   union {
@@ -78,6 +97,7 @@ typedef struct Expression {
     NamedExpr named_expr;
     BinaryExpression* binary_exp;
     UnaryExpression* unary_exp;
+    DynamicList* dynamic_list;
   } value;
 } Expr;
 
@@ -87,7 +107,7 @@ typedef struct {
     VariableDec* var_declaration;
     AssignmentExpr* assignment_exp;
   } value;
-} Instruction;
+} Instruction;  // every line of code is an some instruction!
 
 AssignmentExpr* create_assignment_expr();
 NamedExpr* create_named_expr(char* name);
