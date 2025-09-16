@@ -77,15 +77,12 @@ typedef struct {
 
 typedef struct {
   ParsedToken p_tokens;
-  union {
-    DynamicList* dynamic_list;
-    Expr* expression;
-  } values;
-} ArgumentList;
+  Expr* expression;
+} ArgumentObj;
 
 typedef struct DynamicListExpr {
-  uint64_t list_length;
-  ArgumentList** arg_list;
+  uint64_t length;
+  ArgumentObj** arg_list;
 } DynamicList;   // representation of List data structure!
 
 typedef struct Expression {
@@ -109,12 +106,14 @@ typedef struct {
   } value;
 } Instruction;  // every line of code is an some instruction!
 
+ArgumentObj* create_arg_object(ParsedToken p_token);
 AssignmentExpr* create_assignment_expr();
 NamedExpr* create_named_expr(char* name);
 ConstantObj* create_constant(ConstantTypes const_type, char* name);
 BinaryExpression* create_binary_exp(Operators op);
 UnaryExpression* create_unary_exp(Operators op);
 VariableDec* create_variable_dec();
+DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* index);
 Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t *index);
 void parse(Lexeme** lexeme_list, uint64_t top);
 

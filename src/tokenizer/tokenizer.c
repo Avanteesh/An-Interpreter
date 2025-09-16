@@ -362,13 +362,22 @@ void tokenizer(Lexeme** lexeme_list, char* file_content, uint64_t *top)   {
 	case '{':
 	   created_lex = create_lexeme();
 	   created_lex->lexeme_type = DYNAMIC_LIST_LEFT_BRACE;
+	   printf("DYNAMIC_LIST_LEFT_BRACE\n");
 	   created_lex->content = NULL;
 	   lexeme_list[(*top)++] = created_lex;
 	   break;
 	case '}':
 	   created_lex = create_lexeme();
 	   created_lex->lexeme_type = DYNAMIC_LIST_RIGHT_BRACE;
+	   printf("DYNAMIC_LIST_RIGHT_BRACE\n");
 	   created_lex->content = NULL;
+	   lexeme_list[(*top)++] = created_lex;
+	   break;
+	case ',':
+	   created_lex = create_lexeme();
+	   created_lex->lexeme_type = COMMA;
+	   created_lex->content = NULL;
+	   printf("COMMA\n");
 	   lexeme_list[(*top)++] = created_lex;
 	   break;
 	case ';':

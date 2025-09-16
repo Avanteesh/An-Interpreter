@@ -16,7 +16,8 @@ char* read_file_content(char* file)  {
   }
   FILE* f1 = fopen(file, "r");
   if (f1 == NULL)  {
-    return NULL;
+     fprintf(stderr, "ERROR: File not found!\n");
+     exit(-1);
   }
   char *buffer = (char*)malloc(sizeof(char));
   fseek(f1, 0, SEEK_END);
@@ -37,7 +38,7 @@ int main(int argc, char* argv[])   {
    fprintf(stderr, "ERROR: Invalid no arguments provided!\n");
    exit(-1);
   }
-  else if (strcmp(argv[1], "tokenize") == 0)  {
+  else if (strcmp(argv[1], "parse") == 0)  {
     if (argc < 3) {
       fprintf(stderr, "ERROR: No file provided\n");
       exit(-1);

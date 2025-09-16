@@ -144,20 +144,78 @@ void parse_exp_unary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Operat
   expr_stack[++(*stack_top)] = exp_obj;
 }
 
+ArgumentObj* create_arg_object(ParsedToken p_token)  {
+  ArgumentObj* arg_obj = (ArgumentObj*)malloc(sizeof(ArgumentObj));
+  if (arg_obj == NULL)  {
+    fprintf(stderr, "Cannot create argument object!\n");
+    exit(-1);
+  }
+  arg_obj->p_tokens = p_token;
+  return arg_obj;
+}
+
+DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
+  DynamicList* list_obj = (DynamicList*)malloc(sizeof(DynamicList));
+  list_obj->length = 0;
+  uint64_t list_top = -1;
+  list_obj->arg_list = (ArgumentObj**)malloc(sizeof(ArgumentObj*)*1);
+  bool exit_loop = false;
+  while (true)  {
+    //printf("i = %ld\n", *index);
+    switch(lexeme_list[(*index)]->lexeme_type) {
+      case DYNAMIC_LIST_RIGHT_BRACE:
+	(*index)++;
+	exit_loop = true;
+	break;
+      case COMMA:
+	(*index)++;
+	break;
+      case LINE_END:
+	(*index)++;
+	break;
+      case NUMBER: case STRING_LITERAL: case NAMED_LEXEME:
+      case LEFT_BRACE: case DYNAMIC_LIST_LEFT_BRACE: 
+	Expr* exp = parse_expression(lexeme_list,top,&(*index));
+	list_top++;
+	list_obj->length++;
+	if (lexeme_list[(*index)]->lexeme_type == SEMICOLON)
+          (*index)--;
+	if (list_top > 0)  {
+          ArgumentObj** new_lis = realloc(
+	   list_obj->arg_list, sizeof(ArgumentObj*)*list_top+1
+	  );
+	  list_obj->arg_list = new_lis;
+	}
+	list_obj->arg_list[list_top] = create_arg_object(exp->p_tokens);
+	list_obj->arg_list[list_top]->expression = exp;
+	break;
+    }
+    if (exit_loop) break;
+  }
+  return list_obj;
+}
+
 Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   Lexeme** stack = malloc(sizeof(Lexeme*)*top);
   Lexeme** post_exp = malloc(sizeof(Lexeme*)*top);
   uint64_t stack_top = -1, post_top = -1;
   while (true)  {
-    if (lexeme_list[*index]->lexeme_type == SEMICOLON || 
-	lexeme_list[*index]->lexeme_type == LINE_END)  {
+    if (lexeme_list[*index]->lexeme_type == SEMICOLON || lexeme_list[*index]->lexeme_type == LINE_END 
+	|| lexeme_list[*index]->lexeme_type == COMMA)  {
        break;
     }
     else if (lexeme_list[*index]->lexeme_type == NUMBER ||
 	lexeme_list[*index]->lexeme_type == STRING_LITERAL || 
-	lexeme_list[*index]->lexeme_type == NAMED_LEXEME || 
-	lexeme_list[*index]->lexeme_type == RESERVED_WORD)  {
+	lexeme_list[*index]->lexeme_type == NAMED_LEXEME)  {
       post_exp[++post_top] = lexeme_list[(*index)++];
+    } 
+    else if (lexeme_list[(*index)]->lexeme_type == DYNAMIC_LIST_LEFT_BRACE)  {
+      (*index)++;
+      DynamicList* parsed_list = parse_dynamic_list(lexeme_list, top,&(*index));
+      Expr* lis_exp = (Expr*)malloc(sizeof(Expr));
+      lis_exp->p_tokens = DYNAMIC_LIST;
+      lis_exp->value.dynamic_list = parsed_list;
+      return lis_exp;
     } 
     else if (lexeme_list[(*index)]->lexeme_type == LEFT_BRACE) {
       stack[++stack_top] = lexeme_list[(*index)++];

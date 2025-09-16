@@ -7,4 +7,11 @@ myNum <- myNum mod 10;  $ this is also a comment!
 var name <- "Avanteesh";
 const test_var <- true;
 var res2 <- not test_var;
+(* list structure! *)
+const favourite_colors <- {
+   "RED",
+   "YELLOW",
+   {1,2,"GOLD",4,5} 
+};  
+
 
