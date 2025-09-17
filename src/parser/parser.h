@@ -7,6 +7,7 @@
 
 typedef struct Expression Expr;
 typedef struct DynamicListExpr DynamicList;
+typedef struct TypeFunctionCall FunctionCall;
 
 typedef enum {
   PLUS, MINUS, 
@@ -36,12 +37,13 @@ typedef enum {
   NAMED_EXP,
   EXPR, _NUMBER,
   STRING, BOOL,
-  DYNAMIC_LIST
+  DYNAMIC_LIST,
+  FUNCTION_CALL
 } ParsedToken;
 
 typedef enum {
   VARIABLE_DEC, CONSTANT_DEC,
-  ASSIGNMENT_EXP
+  ASSIGNMENT_EXP, EXPRESSION
 } ProgramSyntaxes;
 
 typedef struct {
@@ -65,7 +67,7 @@ typedef struct {
 } UnaryExpression;  // unary operations!
 
 typedef struct {
-  bool is_constant;  // a variable declaration is constant if true!
+  bool is_constant;// a variable declaration is constant if true!
   NamedExpr* target;
   Expr* value;
 } VariableDec;
@@ -79,6 +81,12 @@ typedef struct {
   ParsedToken p_tokens;
   Expr* expression;
 } ArgumentObj;
+
+typedef struct TypeFunctionCall {
+  NamedExpr function_name;
+  uint64_t arg_length;
+  ArgumentObj** arg_list;
+} FunctionCall;
 
 typedef struct DynamicListExpr {
   uint64_t length;
@@ -95,6 +103,7 @@ typedef struct Expression {
     BinaryExpression* binary_exp;
     UnaryExpression* unary_exp;
     DynamicList* dynamic_list;
+    FunctionCall* function_call;
   } value;
 } Expr;
 
@@ -103,6 +112,7 @@ typedef struct {
   union { 
     VariableDec* var_declaration;
     AssignmentExpr* assignment_exp;
+    Expr* expression;
   } value;
 } Instruction;  // every line of code is an some instruction!
 
@@ -113,6 +123,7 @@ ConstantObj* create_constant(ConstantTypes const_type, char* name);
 BinaryExpression* create_binary_exp(Operators op);
 UnaryExpression* create_unary_exp(Operators op);
 VariableDec* create_variable_dec();
+FunctionCall* parse_function_call(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
 DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* index);
 Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t *index);
 void parse(Lexeme** lexeme_list, uint64_t top);

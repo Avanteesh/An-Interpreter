@@ -109,7 +109,11 @@ static void tokenize_text(Lexeme** list, uint64_t *l_top,char* file_data,uint64_
   Lexeme* created_lex = create_lexeme();
   char *name_expression = (char*)malloc(sizeof(char));
   uint64_t size = 1;
-  while (file_data[(*index_ptr)] != ' ' && file_data[(*index_ptr)] != ';')  {
+  while (file_data[(*index_ptr)] != ' ' && file_data[(*index_ptr)] != ';' )  {
+     if (file_data[*index_ptr] == '(' || file_data[*index_ptr] == ')') {
+	(*index_ptr)--;
+	break;
+     } 
      if (!(file_data[(*index_ptr)] == '_' || isdigit(file_data[(*index_ptr)]) != 0 
        || isalpha(file_data[(*index_ptr)]) != 0)) {
        printf("LexicalError: Invalid token found '%c'\n", file_data[(*index_ptr)]);

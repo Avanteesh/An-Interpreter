@@ -1,3 +1,2 @@
-var result <- (2 ^ 3) ? (10 & 7);
-var compare <-  (result -gt 11) or (result -lt 5);
-
+var colors <- {"RED","YELLOW","BLUE","GREEN"};
+print("hello ", 5 + (7 ^ 5));

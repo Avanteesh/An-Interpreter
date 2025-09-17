@@ -6,6 +6,14 @@
 #include <stdbool.h>
 #include <string.h>
 
+typedef struct {
+  bool is_tokenized;
+  union {
+    Lexeme* token;
+    Expr* parsed_expression;
+  } value;
+} TokenizedObject;
+
 NamedExpr* create_named_expr(char* name)   {
   NamedExpr* nm = (NamedExpr*)malloc(sizeof(NamedExpr));
   if (nm == NULL)  {
@@ -110,6 +118,9 @@ void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Opera
    exp_obj->value.binary_exp->left->value.binary_exp = second->value.binary_exp;
   } else if (second->p_tokens == NAMED_EXP)  {
    exp_obj->value.binary_exp->left->value.named_expr = second->value.named_expr;
+  } else if (second->p_tokens == DYNAMIC_LIST)  {
+   printf("LINE 122\n");
+   exp_obj->value.binary_exp->left->value.dynamic_list = second->value.dynamic_list;
   } else if (second->p_tokens == UNARY_EXP)  {
    exp_obj->value.binary_exp->left->value.unary_exp = second->value.unary_exp;
   } 
@@ -119,6 +130,9 @@ void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Opera
    exp_obj->value.binary_exp->right->value.binary_exp = first->value.binary_exp;
   } else if (first->p_tokens == NAMED_EXP) {
    exp_obj->value.binary_exp->right->value.named_expr = first->value.named_expr;
+  } else if (first->p_tokens == DYNAMIC_LIST) {
+   printf("LINE 134\n");
+   exp_obj->value.binary_exp->right->value.dynamic_list = first->value.dynamic_list;
   } else if (first->p_tokens == UNARY_EXP)  {
    exp_obj->value.binary_exp->right->value.unary_exp = first->value.unary_exp;
   }
@@ -161,7 +175,6 @@ DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* in
   list_obj->arg_list = (ArgumentObj**)malloc(sizeof(ArgumentObj*)*1);
   bool exit_loop = false;
   while (true)  {
-    //printf("i = %ld\n", *index);
     switch(lexeme_list[(*index)]->lexeme_type) {
       case DYNAMIC_LIST_RIGHT_BRACE:
 	(*index)++;
@@ -196,18 +209,32 @@ DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* in
 }
 
 Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
-  Lexeme** stack = malloc(sizeof(Lexeme*)*top);
-  Lexeme** post_exp = malloc(sizeof(Lexeme*)*top);
+  TokenizedObject* stack = malloc(sizeof(TokenizedObject)*top);
+  TokenizedObject* post_exp = malloc(sizeof(TokenizedObject)*top);
   uint64_t stack_top = -1, post_top = -1;
   while (true)  {
     if (lexeme_list[*index]->lexeme_type == SEMICOLON || lexeme_list[*index]->lexeme_type == LINE_END 
 	|| lexeme_list[*index]->lexeme_type == COMMA)  {
        break;
     }
-    else if (lexeme_list[*index]->lexeme_type == NUMBER ||
-	lexeme_list[*index]->lexeme_type == STRING_LITERAL || 
-	lexeme_list[*index]->lexeme_type == NAMED_LEXEME)  {
-      post_exp[++post_top] = lexeme_list[(*index)++];
+    else if (lexeme_list[*index]->lexeme_type == NUMBER || lexeme_list[*index]->lexeme_type == STRING_LITERAL)  {
+      post_exp[++post_top].is_tokenized = false;
+      post_exp[post_top].value.token = lexeme_list[(*index)++];
+    } 
+    else if (lexeme_list[(*index)]->lexeme_type == NAMED_LEXEME) {
+      if (lexeme_list[(*index) + 1]->lexeme_type == LEFT_BRACE)  {
+	// a named expression is a function call if next token is left bracket!
+	FunctionCall* f_call = parse_function_call(lexeme_list, top, &(*index));
+	Expr* funcall_exp = (Expr*)malloc(sizeof(Expr));
+	funcall_exp->p_tokens = FUNCTION_CALL;
+	funcall_exp->value.function_call = f_call;
+	post_exp[++post_top].is_tokenized = true;
+	post_exp[post_top].value.parsed_expression = funcall_exp;
+      } else {
+	// else it's a variable/reference!
+        post_exp[++post_top].is_tokenized = false;
+	post_exp[post_top].value.token = lexeme_list[(*index)++];
+      }
     } 
     else if (lexeme_list[(*index)]->lexeme_type == DYNAMIC_LIST_LEFT_BRACE)  {
       (*index)++;
@@ -215,17 +242,23 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
       Expr* lis_exp = (Expr*)malloc(sizeof(Expr));
       lis_exp->p_tokens = DYNAMIC_LIST;
       lis_exp->value.dynamic_list = parsed_list;
-      return lis_exp;
-    } 
-    else if (lexeme_list[(*index)]->lexeme_type == LEFT_BRACE) {
-      stack[++stack_top] = lexeme_list[(*index)++];
+      post_exp[++post_top].is_tokenized = true;
+      post_exp[post_top].value.parsed_expression = lis_exp;
+    }
+    else if (lexeme_list[(*index)]->lexeme_type == DYNAMIC_LIST_RIGHT_BRACE) {
+      break;
+    } else if (lexeme_list[(*index)]->lexeme_type == LEFT_BRACE) {
+      stack[++stack_top].is_tokenized = false;
+      stack[stack_top].value.token = lexeme_list[(*index)++];
     } 
     else if (lexeme_list[(*index)]->lexeme_type == RIGHT_BRACE)  {
-      while (stack[stack_top]->lexeme_type != LEFT_BRACE)  {
-	Lexeme* lex_tok = stack[stack_top--];
-        post_exp[++post_top] = lex_tok;
-      }
-      stack_top--;
+      if (stack_top != -1)  {
+        while (stack[stack_top].value.token->lexeme_type != LEFT_BRACE)  {
+	  TokenizedObject lex_tok = stack[stack_top--];
+          post_exp[++post_top] = lex_tok;
+        }
+        stack_top--;
+      } 
       (*index)++;
     } else {
        if (lexeme_list[*index]->lexeme_type == PLUS_OP)  {
@@ -247,17 +280,18 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
 	 }
        }
        if (!(lexeme_list[*index]->lexeme_type == UNARY_MINUS_OP 
-	 || lexeme_list[*index]->lexeme_type == UNARY_PLUS_OP)) {
+	 || lexeme_list[*index]->lexeme_type == UNARY_PLUS_OP)) {	
         if (stack_top != -1)  {
           uint64_t first = operator_precedance(lexeme_list[*index]->lexeme_type);
           while ((stack_top != -1) && 
-            first <= operator_precedance(stack[stack_top]->lexeme_type) &&
-	    stack[stack_top]->lexeme_type != LEFT_BRACE)   {
+            first <= operator_precedance(stack[stack_top].value.token->lexeme_type) &&
+	    stack[stack_top].value.token->lexeme_type != LEFT_BRACE)   {
             post_exp[++post_top] = stack[stack_top--];
           }
 	}
       }
-      stack[++stack_top] = lexeme_list[(*index)++];
+      stack[++stack_top].is_tokenized = false;
+      stack[stack_top].value.token = lexeme_list[(*index)++];
     }
   }
   while (stack_top != -1)  
@@ -266,18 +300,21 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   Expr** expr_stack = malloc(sizeof(Expr*)*post_top);
   for (uint64_t i = 0; i <= post_top; i++)   {
     Expr* exp_obj = (Expr*)malloc(sizeof(Expr));
-    switch(post_exp[i]->lexeme_type)  {
+    if (post_exp[i].is_tokenized == false)  {
+      switch(post_exp[i].value.token->lexeme_type)  {
 	case NUMBER: case STRING_LITERAL:
-         exp_obj->p_tokens = (post_exp[i]->lexeme_type == NUMBER)? _NUMBER:STRING;
-         exp_obj->value.constant_obj.value = (char*)malloc(sizeof(char)*strlen(post_exp[i]->content));
-         strcpy(exp_obj->value.constant_obj.value, post_exp[i]->content);
+         exp_obj->p_tokens = (post_exp[i].value.token->lexeme_type == NUMBER)? _NUMBER:STRING;
+         exp_obj->value.constant_obj.value = (char*)malloc(
+	   sizeof(char)*strlen(post_exp[i].value.token->content)
+	 );
+         strcpy(exp_obj->value.constant_obj.value, post_exp[i].value.token->content);
          expr_stack[++stack_top] = exp_obj;
 	 break;
         case NAMED_LEXEME:
          exp_obj->p_tokens = NAMED_EXP;
          exp_obj->value.named_expr.var_name = (char*)malloc(
-	    sizeof(char)*strlen(post_exp[i]->content));
-         strcpy(exp_obj->value.named_expr.var_name, post_exp[i]->content);
+	    sizeof(char)*strlen(post_exp[i].value.token->content));
+         strcpy(exp_obj->value.named_expr.var_name, post_exp[i].value.token->content);
          expr_stack[++stack_top] = exp_obj;
 	 break;
         case PLUS_OP:
@@ -330,11 +367,51 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
 	 parse_exp_binary(expr_stack,&stack_top,exp_obj,BANG_EQUALITY); break;
 	case NOT_EQUAL_OP:
 	 parse_exp_binary(expr_stack,&stack_top,exp_obj,NOT_EQUALITY); break;
+      }
+    } else {
+      Expr* expression = post_exp[i].value.parsed_expression;
+      expr_stack[++stack_top] = expression;
     }
   }
   Expr* exp_obj = expr_stack[stack_top--];
   free(expr_stack);
   return exp_obj;
+}
+
+FunctionCall* parse_function_call(Lexeme** lexeme_list, uint64_t top,uint64_t *index)  {
+  FunctionCall* f_call = (FunctionCall*)malloc(sizeof(FunctionCall));
+  f_call->function_name.var_name = malloc(sizeof(char)*strlen(lexeme_list[(*index)]->content));
+  strcpy(f_call->function_name.var_name, lexeme_list[(*index)++]->content);
+  f_call->arg_length = 0;
+  uint64_t arg_top = -1;
+  f_call->arg_list = (ArgumentObj**)malloc(sizeof(ArgumentObj*)*1);
+  (*index)++;
+  bool exit = false;
+  while (true)  {
+    switch(lexeme_list[(*index)]->lexeme_type)   {
+      case RIGHT_BRACE:
+	exit = true;
+	(*index)++;
+	break;
+      case COMMA:
+	(*index)++;
+	break;
+      default:
+       Expr* _expr = parse_expression(lexeme_list, top, &(*index));
+       if (lexeme_list[(*index)]->lexeme_type == SEMICOLON) 
+	  (*index)--;
+       f_call->arg_length++;
+       arg_top++;
+       if (arg_top > 1)  {
+         ArgumentObj** arg_obj = realloc(f_call->arg_list,sizeof(ArgumentObj*)*arg_top+1);
+	 f_call->arg_list = arg_obj;
+       }
+       f_call->arg_list[arg_top] = create_arg_object(_expr->p_tokens);
+       f_call->arg_list[arg_top]->expression = _expr;
+    }
+    if (exit) break;
+  }
+  return f_call;
 }
 
 VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *index,bool is_assignment_exp)  {
@@ -384,6 +461,15 @@ void parse(Lexeme** lexeme_list, uint64_t top)  {
         module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
         module[m_top]->expression_type = ASSIGNMENT_EXP;
         module[m_top]->value.assignment_exp = assignment_exp;
+       }
+       else if (lexeme_list[i+1]->lexeme_type == LEFT_BRACE)  {
+	 FunctionCall* f_call = parse_function_call(lexeme_list,top,&i);
+	 Expr* exp_obj = malloc(sizeof(Expr));
+	 exp_obj->p_tokens = FUNCTION_CALL;
+	 exp_obj->value.function_call = f_call;
+	 module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
+	 module[m_top]->expression_type = EXPRESSION;
+	 module[m_top]->value.expression = exp_obj;
        }
      }
    }
