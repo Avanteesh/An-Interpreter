@@ -23,13 +23,14 @@ typedef enum {
   EQUALITY_OP,NOT_EQUAL_OP,COMMA
 } Tokens;
 
-
 // reserved word
 #define RESERVED_WORD_VAR "var"
 #define RESERVED_WORD_CONST "const"
 #define RESERVED_WORD_NULL "Null"
 #define RESERVED_WORD_DO "do"
-#define RESERVED_WORD_END "end"
+#define RESERVED_WORD_DONE "done"
+#define RESERVED_WORD_IF "if"
+#define RESERVED_WORD_ELSE "else"
 
 #define NAMED_OPERATOR_MODULO "mod"
 #define NAMED_OPERATOR_AND "and"

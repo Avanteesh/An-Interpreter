@@ -1,2 +1,7 @@
-var colors <- {"RED","YELLOW","BLUE","GREEN"};
-print({1,2,3,colors});
+var num <- 5;
+
+if 2 ^ num -eq 32 do
+  num <- num - 1;
+  print("hiii!!");
+done
+

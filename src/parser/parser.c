@@ -103,7 +103,7 @@ uint64_t operator_precedance(Tokens token)   {
   } 
 }
 
-void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Operators op)  {
+void parse_exp_binary(Expr** expr_stack,int64_t* stack_top,Expr* exp_obj,Operators op)  {
   Expr *first = expr_stack[(*stack_top)], *second = expr_stack[(*stack_top)-1];
   expr_stack[(*stack_top)--] = NULL;
   expr_stack[(*stack_top)--] = NULL; 
@@ -120,7 +120,6 @@ void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Opera
   } else if (second->p_tokens == NAMED_EXP)  {
    exp_obj->value.binary_exp->left->value.named_expr = second->value.named_expr;
   } else if (second->p_tokens == DYNAMIC_LIST)  {
-   printf("LINE 122\n");
    exp_obj->value.binary_exp->left->value.dynamic_list = second->value.dynamic_list;
   } else if (second->p_tokens == UNARY_EXP)  {
    exp_obj->value.binary_exp->left->value.unary_exp = second->value.unary_exp;
@@ -132,7 +131,6 @@ void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Opera
   } else if (first->p_tokens == NAMED_EXP) {
    exp_obj->value.binary_exp->right->value.named_expr = first->value.named_expr;
   } else if (first->p_tokens == DYNAMIC_LIST) {
-   printf("LINE 134\n");
    exp_obj->value.binary_exp->right->value.dynamic_list = first->value.dynamic_list;
   } else if (first->p_tokens == UNARY_EXP)  {
    exp_obj->value.binary_exp->right->value.unary_exp = first->value.unary_exp;
@@ -140,7 +138,7 @@ void parse_exp_binary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Opera
   expr_stack[++(*stack_top)] = exp_obj;
 }
 
-void parse_exp_unary(Expr** expr_stack, uint64_t* stack_top,Expr* exp_obj,Operators op) {
+void parse_exp_unary(Expr** expr_stack, int64_t* stack_top,Expr* exp_obj,Operators op) {
   Expr* f_operand = expr_stack[(*stack_top)];
   expr_stack[(*stack_top)--] = NULL;
   exp_obj->p_tokens = UNARY_EXP;
@@ -172,7 +170,7 @@ ArgumentObj* create_arg_object(ParsedToken p_token)  {
 DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   DynamicList* list_obj = (DynamicList*)malloc(sizeof(DynamicList));
   list_obj->length = 0;
-  uint64_t list_top = -1;
+  int64_t list_top = -1;
   list_obj->arg_list = (ArgumentObj**)malloc(sizeof(ArgumentObj*)*1);
   bool exit_loop = false;
   while (true)  {
@@ -209,20 +207,29 @@ DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* in
   return list_obj;
 }
 
+static bool is_comparision_operator(Tokens symbol)  {
+  switch(symbol) { 
+     case GREATER_THAN_OP:case LESS_THAN_OP:
+     case GREATER_THAN_OR_EQUAL_OP: case LESS_THAN_OR_EQUAL_OP:
+     case EQUALITY_OP: case NOT_EQUAL_OP: 
+    return true;      
+  }
+  return false;
+}
+
 Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   TokenizedObject* stack = malloc(sizeof(TokenizedObject)*top);
   TokenizedObject* post_exp = malloc(sizeof(TokenizedObject)*top);
-  uint64_t stack_top = -1, post_top = -1;
+  int64_t stack_top = -1, post_top = -1;
   while (true)  {
-    if (lexeme_list[*index]->lexeme_type == SEMICOLON || lexeme_list[*index]->lexeme_type == LINE_END 
-	|| lexeme_list[*index]->lexeme_type == COMMA)  {
+    if (lexeme_list[*index]->lexeme_type == SEMICOLON || lexeme_list[*index]->lexeme_type == LINE_END || lexeme_list[*index]->lexeme_type == COMMA)  {
        break;
-    }
-    else if (lexeme_list[*index]->lexeme_type == NUMBER || lexeme_list[*index]->lexeme_type == STRING_LITERAL)  {
+    } else if (lexeme_list[*index]->lexeme_type == RESERVED_WORD) {
+      if (strcmp(lexeme_list[*index]->content, "do") == 0) break;
+    } else if (lexeme_list[*index]->lexeme_type == NUMBER || lexeme_list[*index]->lexeme_type == STRING_LITERAL)  {
       post_exp[++post_top].is_tokenized = false;
       post_exp[post_top].value.token = lexeme_list[(*index)++];
-    } 
-    else if (lexeme_list[(*index)]->lexeme_type == NAMED_LEXEME) {
+    } else if (lexeme_list[(*index)]->lexeme_type == NAMED_LEXEME) {
       if (lexeme_list[(*index) + 1]->lexeme_type == LEFT_BRACE)  {
 	// a named expression is a function call if next token is left bracket!
 	FunctionCall* f_call = parse_function_call(lexeme_list, top, &(*index));
@@ -252,14 +259,21 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
       stack[++stack_top].is_tokenized = false;
       stack[stack_top].value.token = lexeme_list[(*index)++];
     } 
-    else if (lexeme_list[(*index)]->lexeme_type == RIGHT_BRACE)  {
-      if (stack_top > -1)  {
-        while (stack[stack_top].value.token->lexeme_type != LEFT_BRACE)  {
+    else if (lexeme_list[(*index)]->lexeme_type == RIGHT_BRACE || 
+	is_comparision_operator(lexeme_list[(*index)]->lexeme_type) == true)  {
+      if (stack_top > -1 && is_comparision_operator(lexeme_list[(*index)]->lexeme_type) == true) {
+        while (true)  {
+	  if (stack_top < 0) break;
+	  else if (stack[stack_top].value.token->lexeme_type == LEFT_BRACE) break;
 	  TokenizedObject lex_tok = stack[stack_top--];
           post_exp[++post_top] = lex_tok;
         }
-        stack_top--;
-      } 
+	if (stack_top > -1) stack_top--;
+      }
+      if (is_comparision_operator(lexeme_list[*index]->lexeme_type) == true) {
+	stack[++stack_top].is_tokenized = false;
+	stack[stack_top].value.token = lexeme_list[(*index)];
+      }
       (*index)++;
     } else {
        if (lexeme_list[*index]->lexeme_type == PLUS_OP)  {
@@ -415,6 +429,38 @@ FunctionCall* parse_function_call(Lexeme** lexeme_list, uint64_t top,uint64_t *i
   return f_call;
 }
 
+IfStatement* parse_if_statement(Lexeme** lexeme_list, uint64_t top,uint64_t* index)  {
+  // parsing if statements!
+  IfStatement* if_statement = (IfStatement*)malloc(sizeof(IfStatement));
+  (*index)++;
+  if_statement->condition = parse_expression(lexeme_list,top,&(*index));
+  if (lexeme_list[(*index)]->lexeme_type == RESERVED_WORD) {
+    if (strcmp(lexeme_list[(*index)]->content, "do") != 0)  {
+      fprintf(stderr, "ParserError: missing token 'do' after expression if\n");
+      exit(-1);
+    }
+  }
+  (*index)++;
+  bool loop_interrupt = false;
+  while (true)  {
+    switch (lexeme_list[*index]->lexeme_type) {
+      case RESERVED_WORD:
+        if (strcmp(lexeme_list[(*index)]->content, "done") == 0)  
+	  return if_statement;
+        loop_interrupt = (strcmp(lexeme_list[(*index)]->content,"else") == 0)?true:false;
+        break;
+      case LINE_END:
+	(*index)++;
+	break;
+      default:
+        if_statement->body = body_parser(lexeme_list,top,&(*index));
+        loop_interrupt = (*index >= top)?true:false;
+    }
+    if (loop_interrupt) break;
+  }
+  return if_statement;
+}
+
 VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *index,bool is_assignment_exp)  {
    *(index) = (is_assignment_exp)?(*index)+1:(*index);
    NamedExpr* named_expr = create_named_expr(lexeme_list[(*index)]->content);
@@ -430,23 +476,28 @@ VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *inde
    exit(-1);
 }
 
-void parse(Lexeme** lexeme_list, uint64_t top)  {
-  Instruction** module = (Instruction**)malloc(sizeof(Instruction*)*top);
-  uint64_t m_top = -1;
-  for (uint64_t i = 0; i < top; i++)  {
+Statement** body_parser(Lexeme** lexeme_list, uint64_t top, uint64_t *offset)  {
+  Statement** module = (Statement**)malloc(sizeof(Statement*)*top);
+  uint64_t m_top = -1, i = *offset;
+  for (; i < top; i++)  {
     if (lexeme_list[i]->lexeme_type == RESERVED_WORD) {
       if (strcmp(lexeme_list[i]->content, RESERVED_WORD_VAR) == 0) {
        VariableDec* var_dec = parse_variable_dec(lexeme_list, top, &i, true);
-       module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
+       module[++m_top] = (Statement*)malloc(sizeof(Statement));
        module[m_top]->expression_type = VARIABLE_DEC;
        module[m_top]->value.var_declaration = var_dec;
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_CONST) == 0)  {
        VariableDec* const_dec = parse_variable_dec(lexeme_list, top, &i, true);
        const_dec->is_constant = true;
-       module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
+       module[++m_top] = (Statement*)malloc(sizeof(Statement));
        module[m_top]->expression_type = CONSTANT_DEC;  // CONSTANT declaration
        module[m_top]->value.var_declaration = const_dec;
-      } 
+      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_IF) == 0)  {
+        IfStatement* if_statement = parse_if_statement(lexeme_list,top,&i);
+	module[++m_top] = (Statement*)malloc(sizeof(Statement));
+	module[m_top]->expression_type = IF_CONDITIONAL;
+	module[m_top]->value.if_statement = if_statement;
+      }
     }  
     else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
      if (i+1 < top)  {
@@ -459,7 +510,7 @@ void parse(Lexeme** lexeme_list, uint64_t top)  {
 	assignment_exp->value->p_tokens = var_dec->value->p_tokens;
         assignment_exp->value->value = var_dec->value->value;
 	free(var_dec);
-        module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
+        module[++m_top] = (Statement*)malloc(sizeof(Statement));
         module[m_top]->expression_type = ASSIGNMENT_EXP;
         module[m_top]->value.assignment_exp = assignment_exp;
        }
@@ -468,12 +519,20 @@ void parse(Lexeme** lexeme_list, uint64_t top)  {
 	 Expr* exp_obj = malloc(sizeof(Expr));
 	 exp_obj->p_tokens = FUNCTION_CALL;
 	 exp_obj->value.function_call = f_call;
-	 module[++m_top] = (Instruction*)malloc(sizeof(Instruction));
+	 module[++m_top] = (Statement*)malloc(sizeof(Statement));
 	 module[m_top]->expression_type = EXPRESSION;
 	 module[m_top]->value.expression = exp_obj;
        }
      }
    }
   }
+  *offset = i;
+  return module;
+}
+
+Statement** parse(Lexeme** lexeme_list, uint64_t top)  {
+  uint64_t offset = 0;
+  Statement** module = body_parser(lexeme_list, top, &offset);
+  return module;
 }
 

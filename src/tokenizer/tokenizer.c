@@ -20,12 +20,15 @@ static bool is_a_reserved_word(char* word)  {
   if (strcmp(word, RESERVED_WORD_VAR) == 0)  return true;
   else if (strcmp(word, RESERVED_WORD_CONST) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_NULL) == 0) return true;
+  else if (strcmp(word, RESERVED_WORD_IF) == 0) return true;
+  else if (strcmp(word, RESERVED_WORD_DO) == 0) return true;
+  else if (strcmp(word, RESERVED_WORD_DONE) == 0) return true;
+  else if (strcmp(word, RESERVED_WORD_ELSE) == 0) return true;
   return false;
 }
 
-static void tokenize_comparision_or_minus_op(Lexeme** list,uint64_t *l_top, char* file_data,
-   uint64_t* index_ptr){
-  /* tokenizes operators, like (-gt, lt, -geq, -leq, -eq, -neq, -)*/
+static void tokenize_comparision_or_minus_op(Lexeme** list,uint64_t *l_top, char* file_data,uint64_t* index_ptr){
+  /* tokenizes operators, like (-gt, lt, -geq, -leq, -eq, -neq, - (MINUS) )*/
   Lexeme* created_lex = create_lexeme();
   if (file_data[(*index_ptr) + 1] == 'g')  {
     if (file_data[(*index_ptr) + 2] == 't')  {
@@ -109,15 +112,15 @@ static void tokenize_text(Lexeme** list, uint64_t *l_top,char* file_data,uint64_
   Lexeme* created_lex = create_lexeme();
   char *name_expression = (char*)malloc(sizeof(char));
   uint64_t size = 1;
-  while (file_data[(*index_ptr)] != ' ' && file_data[(*index_ptr)] != ';' )  {
+  while (file_data[(*index_ptr)] != ' ' && file_data[(*index_ptr)] != ';')  {
      if (file_data[*index_ptr] == '(' || file_data[*index_ptr] == ')'
-	  || file_data[*index_ptr] == '}') {
+	  || file_data[*index_ptr] == '}' || file_data[*index_ptr] == '\n') {
 	(*index_ptr)--;
 	break;
-     } 
+     }
      if (!(file_data[(*index_ptr)] == '_' || isdigit(file_data[(*index_ptr)]) != 0 
        || isalpha(file_data[(*index_ptr)]) != 0)) {
-       printf("LexicalError: Invalid token found '%c'\n", file_data[(*index_ptr)]);
+       printf("LexicalError: Invalid token found here'%c'\n", file_data[(*index_ptr)]);
        exit(1);
      }
      char next[] = {file_data[(*index_ptr)++], '\0'};

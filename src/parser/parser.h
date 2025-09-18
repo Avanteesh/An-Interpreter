@@ -8,6 +8,8 @@
 typedef struct Expression Expr;
 typedef struct DynamicListExpr DynamicList;
 typedef struct TypeFunctionCall FunctionCall;
+typedef struct IfStatementObj IfStatement;
+typedef struct StatementObj Statement;
 
 typedef enum {
   PLUS, MINUS, 
@@ -43,7 +45,8 @@ typedef enum {
 
 typedef enum {
   VARIABLE_DEC, CONSTANT_DEC,
-  ASSIGNMENT_EXP, EXPRESSION
+  ASSIGNMENT_EXP, EXPRESSION,
+  IF_CONDITIONAL
 } ProgramSyntaxes;
 
 typedef struct {
@@ -77,6 +80,13 @@ typedef struct {
   Expr* value;
 } AssignmentExpr;
 
+typedef struct IfStatementObj {
+  Expr* condition;
+  uint64_t statement_length;
+  Statement** body;
+  Statement** else_body;
+} IfStatement;
+
 typedef struct {
   ParsedToken p_tokens;
   Expr* expression;
@@ -107,16 +117,22 @@ typedef struct Expression {
   } value;
 } Expr;
 
-typedef struct {
+typedef struct StatementObj {
   ProgramSyntaxes expression_type;
   union { 
     VariableDec* var_declaration;
     AssignmentExpr* assignment_exp;
     Expr* expression;
+    IfStatement* if_statement;
   } value;
-} Instruction;  // every line of code is an some instruction!
+} Statement;  // every line of code is an some instruction!
+
 
 ArgumentObj* create_arg_object(ParsedToken p_token);
+IfStatement* parse_if_statement(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
+void parse_exp_binary(Expr** expr_stack, int64_t* stack_top, Expr* exp_obj, Operators op);
+void parse_exp_unary(Expr** expr_stack,int64_t* stack_top,Expr* exp_obj,Operators op);
+uint64_t operator_precedance(Tokens token);
 AssignmentExpr* create_assignment_expr();
 NamedExpr* create_named_expr(char* name);
 ConstantObj* create_constant(ConstantTypes const_type, char* name);
@@ -126,7 +142,8 @@ VariableDec* create_variable_dec();
 FunctionCall* parse_function_call(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
 DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* index);
 Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t *index);
-void parse(Lexeme** lexeme_list, uint64_t top);
+Statement** body_parser(Lexeme** lexeme_list, uint64_t top, uint64_t* offset);
+Statement** parse(Lexeme** lexeme_list, uint64_t top);
 
 #endif
 
