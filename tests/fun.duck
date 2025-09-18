@@ -1,2 +1,2 @@
 var colors <- {"RED","YELLOW","BLUE","GREEN"};
-print("hello ", 5 + (7 ^ 5));
+print({1,2,3,colors});

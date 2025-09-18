@@ -81,6 +81,7 @@ VariableDec* create_variable_dec()  {
 
 uint64_t operator_precedance(Tokens token)   {
   switch(token)  {
+    case LEFT_BRACE: case RIGHT_BRACE: return 14;
     case POWER_OP: return 13;
     case UNARY_PLUS_OP: case UNARY_MINUS_OP: 
     case UNARY_FLIP_OP: return 12;
@@ -252,7 +253,7 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
       stack[stack_top].value.token = lexeme_list[(*index)++];
     } 
     else if (lexeme_list[(*index)]->lexeme_type == RIGHT_BRACE)  {
-      if (stack_top != -1)  {
+      if (stack_top > -1)  {
         while (stack[stack_top].value.token->lexeme_type != LEFT_BRACE)  {
 	  TokenizedObject lex_tok = stack[stack_top--];
           post_exp[++post_top] = lex_tok;

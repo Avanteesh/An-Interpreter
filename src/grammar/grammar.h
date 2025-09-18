@@ -28,6 +28,8 @@ typedef enum {
 #define RESERVED_WORD_VAR "var"
 #define RESERVED_WORD_CONST "const"
 #define RESERVED_WORD_NULL "Null"
+#define RESERVED_WORD_DO "do"
+#define RESERVED_WORD_END "end"
 
 #define NAMED_OPERATOR_MODULO "mod"
 #define NAMED_OPERATOR_AND "and"
