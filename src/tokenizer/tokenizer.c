@@ -24,6 +24,7 @@ static bool is_a_reserved_word(char* word)  {
   else if (strcmp(word, RESERVED_WORD_DO) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_DONE) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_ELSE) == 0) return true;
+  else if (strcmp(word, RESERVED_WORD_FUNCDEF) == 0) return true;
   return false;
 }
 
@@ -114,7 +115,8 @@ static void tokenize_text(Lexeme** list, uint64_t *l_top,char* file_data,uint64_
   uint64_t size = 1;
   while (file_data[(*index_ptr)] != ' ' && file_data[(*index_ptr)] != ';')  {
      if (file_data[*index_ptr] == '(' || file_data[*index_ptr] == ')'
-	  || file_data[*index_ptr] == '}' || file_data[*index_ptr] == '\n') {
+	  || file_data[*index_ptr] == '}' || file_data[*index_ptr] == '\n'
+	  || file_data[*index_ptr] == ',') {
 	(*index_ptr)--;
 	break;
      }
@@ -294,12 +296,21 @@ void tokenizer(Lexeme** lexeme_list, char* file_content, uint64_t *top)   {
 	   printf("BITWISE AND\n");
 	   lexeme_list[(*top)++] = created_lex;
 	   break;
-	case '|':
-	   created_lex = create_lexeme();
-	   created_lex->lexeme_type = BIT_OR_OP;
-	   created_lex->content = NULL;
-	   printf("BITWISE OR\n");
-	   lexeme_list[(*top)++] = created_lex;
+	case '|': 
+	   if (file_content[i + 1] == '>')  {
+	     created_lex = create_lexeme();
+	     created_lex->lexeme_type = RETURN_OPERATOR;
+	     created_lex->content = NULL;
+	     printf("RETURN OPERATOR\n");
+	     lexeme_list[(*top)++] = created_lex;
+	     i++;
+	   } else {
+	     created_lex = create_lexeme();
+	     created_lex->lexeme_type = BIT_OR_OP;
+	     created_lex->content = NULL;
+	     printf("BITWISE OR\n");
+	     lexeme_list[(*top)++] = created_lex;
+	   }
 	   break; 
 	case '+':
 	   created_lex = create_lexeme();

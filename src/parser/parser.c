@@ -186,7 +186,8 @@ DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* in
 	(*index)++;
 	break;
       case NUMBER: case STRING_LITERAL: case NAMED_LEXEME:
-      case LEFT_BRACE: case DYNAMIC_LIST_LEFT_BRACE: 
+      case LEFT_BRACE: case DYNAMIC_LIST_LEFT_BRACE: case
+	PLUS_OP: case MINUS_OP: case UNARY_FLIP_OP: case LOG_NOT_OP:
 	Expr* exp = parse_expression(lexeme_list,top,&(*index));
 	list_top++;
 	list_obj->length++;
@@ -226,6 +227,7 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
        break;
     } else if (lexeme_list[*index]->lexeme_type == RESERVED_WORD) {
       if (strcmp(lexeme_list[*index]->content, "do") == 0) break;
+      else if (strcmp(lexeme_list[*index]->content, "done") == 0) break;
     } else if (lexeme_list[*index]->lexeme_type == NUMBER || lexeme_list[*index]->lexeme_type == STRING_LITERAL)  {
       post_exp[++post_top].is_tokenized = false;
       post_exp[post_top].value.token = lexeme_list[(*index)++];
@@ -417,7 +419,7 @@ FunctionCall* parse_function_call(Lexeme** lexeme_list, uint64_t top,uint64_t *i
 	  (*index)--;
        f_call->arg_length++;
        arg_top++;
-       if (arg_top > 1)  {
+       if (arg_top > 0)  {
          ArgumentObj** arg_obj = realloc(f_call->arg_list,sizeof(ArgumentObj*)*arg_top+1);
 	 f_call->arg_list = arg_obj;
        }
@@ -435,7 +437,7 @@ IfStatement* parse_if_statement(Lexeme** lexeme_list, uint64_t top,uint64_t* ind
   (*index)++;
   if_statement->condition = parse_expression(lexeme_list,top,&(*index));
   if (lexeme_list[(*index)]->lexeme_type == RESERVED_WORD) {
-    if (strcmp(lexeme_list[(*index)]->content, "do") != 0)  {
+    if (strcmp(lexeme_list[(*index)]->content, RESERVED_WORD_DO) != 0)  {
       fprintf(stderr, "ParserError: missing token 'do' after expression if\n");
       exit(-1);
     }
@@ -445,20 +447,84 @@ IfStatement* parse_if_statement(Lexeme** lexeme_list, uint64_t top,uint64_t* ind
   while (true)  {
     switch (lexeme_list[*index]->lexeme_type) {
       case RESERVED_WORD:
-        if (strcmp(lexeme_list[(*index)]->content, "done") == 0)  
+	if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) == 0)
 	  return if_statement;
-        loop_interrupt = (strcmp(lexeme_list[(*index)]->content,"else") == 0)?true:false;
+        if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_IF) == 0)  {
+	  if_statement->body = body_parser(lexeme_list,top,&(*index),true);
+	}
+        loop_interrupt = (strcmp(lexeme_list[(*index)]->content,RESERVED_WORD_ELSE) == 0)?true:false;
         break;
       case LINE_END:
 	(*index)++;
 	break;
       default:
-        if_statement->body = body_parser(lexeme_list,top,&(*index));
+        if_statement->body = body_parser(lexeme_list,top,&(*index),true);
         loop_interrupt = (*index >= top)?true:false;
     }
     if (loop_interrupt) break;
   }
+  if (lexeme_list[*index]->lexeme_type == RESERVED_WORD)  {
+    if (strcmp(lexeme_list[*index]->content,RESERVED_WORD_ELSE) == 0)  {
+      (*index)++;
+      if_statement->else_body = body_parser(lexeme_list, top,&(*index), true);
+      if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) != 0)  {
+	fprintf(stderr, "ParserError: Missing token 'done' after else block!");
+	exit(-1);
+      }
+    }
+  }
   return if_statement;
+}
+
+FunctionDef* parse_function_definition(Lexeme** lexeme_list,uint64_t top,uint64_t* index) {
+  FunctionDef* fdef = (FunctionDef*)malloc(sizeof(FunctionDef));
+  fdef->arg_length = 0;
+  uint64_t arg_top = -1;
+  (*index)++;
+  if (lexeme_list[*index]->lexeme_type != NAMED_LEXEME)  {
+    fprintf(stderr, "ParserError: Function Name missing!\n");
+    exit(-1);
+  }
+  fdef->function_name.var_name = malloc(sizeof(char)*strlen(lexeme_list[*index]->content));
+  strcpy(fdef->function_name.var_name, lexeme_list[*index]->content);
+  (*index)++;
+  if (lexeme_list[*index]->lexeme_type != LEFT_BRACE)  {
+    fprintf(stderr, "ParserError: Missing left parenthesis!\n");
+    exit(-1);
+  }
+  (*index)++;
+  fdef->arg_list = (NamedExpr**)malloc(sizeof(NamedExpr*)*1);
+  while (true)  {
+    if (lexeme_list[*index]->lexeme_type == NAMED_LEXEME)  {
+      NamedExpr* named_exp = malloc(sizeof(NamedExpr));
+      named_exp->var_name = (char*)malloc(sizeof(char)*strlen(lexeme_list[*index]->content));
+      strcpy(named_exp->var_name, lexeme_list[*index]->content);
+      arg_top++;
+      if (arg_top > 0) {
+	NamedExpr** named_exparr = realloc(fdef->arg_list,sizeof(NamedExpr*)*arg_top+1);
+	fdef->arg_list = named_exparr;
+      }
+      fdef->arg_list[arg_top] = named_exp;
+      fdef->arg_length++;
+      (*index)++;
+    } 
+    if (lexeme_list[*index]->lexeme_type == COMMA) { 
+      (*index)++;
+    } else if (lexeme_list[*index]->lexeme_type == RIGHT_BRACE) { 
+      (*index)++;
+      break;
+    } else {
+      fprintf(stderr, "ParserError: invalid token found in function argument list!\n");
+      exit(-1);
+    }
+  }
+  if (lexeme_list[*index]->lexeme_type == RESERVED_WORD) {
+    if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DO) == 0) {
+      (*index)++;
+      fdef->body = body_parser(lexeme_list,top,&(*index),true);
+    }
+  }
+  return fdef;
 }
 
 VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *index,bool is_assignment_exp)  {
@@ -476,7 +542,8 @@ VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *inde
    exit(-1);
 }
 
-Statement** body_parser(Lexeme** lexeme_list, uint64_t top, uint64_t *offset)  {
+Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool inside_block){
+  // bool inside_block (indicates whether )
   Statement** module = (Statement**)malloc(sizeof(Statement*)*top);
   uint64_t m_top = -1, i = *offset;
   for (; i < top; i++)  {
@@ -497,6 +564,24 @@ Statement** body_parser(Lexeme** lexeme_list, uint64_t top, uint64_t *offset)  {
 	module[++m_top] = (Statement*)malloc(sizeof(Statement));
 	module[m_top]->expression_type = IF_CONDITIONAL;
 	module[m_top]->value.if_statement = if_statement;
+      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_DONE) == 0)  {
+	if (inside_block)  
+	  break;  // break if body is being parsed inside a scope (statement like if,for,while)!
+	else {
+	   fprintf(stderr, "ParserError: 'done' must be used to end the scope!\n");
+	   exit(1);
+	}
+      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_ELSE) == 0)  {
+        if (inside_block) break;
+	else {
+	  fprintf(stderr, "ParserError: if-block must be used before 'else'\n");
+	  exit(1);
+	}
+      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_FUNCDEF) == 0)  {
+	FunctionDef* fdef = parse_function_definition(lexeme_list,top,&i);
+	module[++m_top] = malloc(sizeof(Statement));
+	module[m_top]->expression_type = FUNCTION_DEFINITION;
+	module[m_top]->value.func_def = fdef;
       }
     }  
     else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
@@ -524,6 +609,21 @@ Statement** body_parser(Lexeme** lexeme_list, uint64_t top, uint64_t *offset)  {
 	 module[m_top]->value.expression = exp_obj;
        }
      }
+   } else if (lexeme_list[i]->lexeme_type == RETURN_OPERATOR)  {
+     ReturnObj* return_obj = malloc(sizeof(ReturnObj));
+     if (lexeme_list[i + 1]->lexeme_type == SEMICOLON )  {
+       i++;
+       return_obj->expression = NULL;
+     } else if (lexeme_list[i + 1]->lexeme_type == LINE_END)  {
+       fprintf(stderr, "ParserError: missing token after return operator!");
+       exit(-1);
+     } else {
+	i++;
+	return_obj->expression = parse_expression(lexeme_list,top,&i);
+	module[++m_top] = malloc(sizeof(Statement));
+	module[m_top]->expression_type = RETURN_EXPRESSION;
+	module[m_top]->value.return_obj = return_obj;
+     }
    }
   }
   *offset = i;
@@ -532,7 +632,7 @@ Statement** body_parser(Lexeme** lexeme_list, uint64_t top, uint64_t *offset)  {
 
 Statement** parse(Lexeme** lexeme_list, uint64_t top)  {
   uint64_t offset = 0;
-  Statement** module = body_parser(lexeme_list, top, &offset);
+  Statement** module = body_parser(lexeme_list, top, &offset, false);
   return module;
 }
 

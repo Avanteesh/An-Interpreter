@@ -1,7 +1,13 @@
 var num <- 5;
 
+funcdef calculate(x, y) do
+   |> {x + y, x - y, x / y, x * y, x ^ y};
+done
+
 if 2 ^ num -eq 32 do
   num <- num - 1;
   print("hiii!!");
+else
+  num <- num + 1;
+  print("Bye!");
 done
-
