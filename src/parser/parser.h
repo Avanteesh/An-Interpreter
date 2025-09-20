@@ -7,10 +7,12 @@
 
 typedef struct Expression Expr;
 typedef struct DynamicListExpr DynamicList;
+typedef struct HashMapObj HashMap;
 typedef struct TypeFunctionCall FunctionCall;
 typedef struct StatementObj Statement;
 typedef struct IfStatementObj IfStatement;
 typedef struct FunctionDefObj FunctionDef;
+typedef struct EnumDefObj EnumDef;
 
 typedef enum {
   PLUS, MINUS, 
@@ -41,6 +43,7 @@ typedef enum {
   EXPR, _NUMBER,
   STRING, BOOL,
   DYNAMIC_LIST,
+  HASH_MAP,
   FUNCTION_CALL
 } ParsedToken;
 
@@ -49,7 +52,8 @@ typedef enum {
   ASSIGNMENT_EXP, EXPRESSION,
   IF_CONDITIONAL, 
   FUNCTION_DEFINITION,
-  RETURN_EXPRESSION
+  RETURN_EXPRESSION,
+  ENUM_DEFINITION
 } ProgramSyntaxes;
 
 typedef struct {
@@ -88,6 +92,13 @@ typedef struct IfStatementObj {
   Statement** body;
   Statement** else_body;
 } IfStatement;
+
+typedef struct EnumDefObj {
+  NamedExpr enum_name;
+  uint64_t no_of_constants;
+  NamedExpr** constants;
+  Expr** values;
+} EnumDef;
 
 typedef struct {
   ParsedToken p_tokens;
@@ -139,6 +150,7 @@ typedef struct StatementObj {
     IfStatement* if_statement;
     ReturnObj* return_obj;
     FunctionDef* func_def;
+    EnumDef* enum_def;  
   } value;
 } Statement;  // every line of code is an some instruction!
 
@@ -148,6 +160,7 @@ IfStatement* parse_if_statement(Lexeme** lexeme_list,uint64_t top,uint64_t* inde
 void parse_exp_binary(Expr** expr_stack, int64_t* stack_top, Expr* exp_obj, Operators op);
 void parse_exp_unary(Expr** expr_stack,int64_t* stack_top,Expr* exp_obj,Operators op);
 uint64_t operator_precedance(Tokens token);
+EnumDef* parse_enum_definition(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
 AssignmentExpr* create_assignment_expr();
 NamedExpr* create_named_expr(char* name);
 ConstantObj* create_constant(ConstantTypes const_type, char* name);

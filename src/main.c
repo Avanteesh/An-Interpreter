@@ -48,7 +48,6 @@ int main(int argc, char* argv[])   {
     Lexeme** lexeme_list = malloc(sizeof(Lexeme*) * strlen(file_content)-2);
     tokenizer(lexeme_list, file_content, &top);
     Statement** parse_tree = parse(lexeme_list, top);
-    printf("Parsing success!!\n");
   }
   return 0;
 }

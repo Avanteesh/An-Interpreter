@@ -21,7 +21,7 @@ typedef enum {
   GREATER_THAN_OP, LESS_THAN_OP,
   GREATER_THAN_OR_EQUAL_OP, LESS_THAN_OR_EQUAL_OP,
   EQUALITY_OP,NOT_EQUAL_OP,COMMA,
-  RETURN_OPERATOR
+  MAP_BRACE,RETURN_OPERATOR
 } Tokens;
 
 // reserved word
@@ -33,6 +33,7 @@ typedef enum {
 #define RESERVED_WORD_IF "if"
 #define RESERVED_WORD_ELSE "else"
 #define RESERVED_WORD_FUNCDEF "funcdef"
+#define RESERVED_WORD_ENUM "enum"
 
 #define NAMED_OPERATOR_MODULO "mod"
 #define NAMED_OPERATOR_AND "and"

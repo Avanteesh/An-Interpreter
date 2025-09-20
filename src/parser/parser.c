@@ -5,6 +5,7 @@
 #include "grammar.h"
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 
 typedef struct {
   bool is_tokenized;
@@ -448,6 +449,7 @@ IfStatement* parse_if_statement(Lexeme** lexeme_list, uint64_t top,uint64_t* ind
     switch (lexeme_list[*index]->lexeme_type) {
       case RESERVED_WORD:
 	if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) == 0)
+	  (*index)++;
 	  return if_statement;
         if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_IF) == 0)  {
 	  if_statement->body = body_parser(lexeme_list,top,&(*index),true);
@@ -527,6 +529,75 @@ FunctionDef* parse_function_definition(Lexeme** lexeme_list,uint64_t top,uint64_
   return fdef;
 }
 
+EnumDef* parse_enum_definition(Lexeme** lexeme_list, uint64_t top, uint64_t *index) {
+  (*index)++;
+  EnumDef* enum_def = (EnumDef*)malloc(sizeof(EnumDef));
+  enum_def->no_of_constants = 0;
+  uint64_t arr_top = -1;
+  enum_def->constants = (NamedExpr**)malloc(sizeof(NamedExpr*)*1);
+  enum_def->values = (Expr**)malloc(sizeof(Expr*)*1);
+  if (lexeme_list[*index]->lexeme_type != NAMED_LEXEME)  {
+    fprintf(stderr, "ParserError: Missing token 'enum {Enum_name}' after enum declaration!");
+    exit(-1);
+  }
+  if (!isupper(lexeme_list[*index]->content[0]))  {
+    fprintf(stderr, "ParserError: enum name must be an upper case alphabet!");
+    exit(-1);
+  }
+  (*index)++;
+  if (lexeme_list[(*index)]->lexeme_type == RESERVED_WORD) {
+    if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DO) == 0) {
+      (*index)++;
+      while (true)  {
+	switch(lexeme_list[*index]->lexeme_type)  {
+	  case LINE_END:
+	    (*index)++;
+	    break;
+	  case COMMA:
+	    (*index)++;
+	    break;
+	  case RESERVED_WORD:
+	    if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) == 0)  {
+	      (*index)++;
+	      return enum_def;
+	    }
+	    break;
+	  case NAMED_LEXEME:
+	    NamedExpr* name_exp = (NamedExpr*)malloc(sizeof(NamedExpr));
+	    name_exp->var_name = malloc(strlen(lexeme_list[*index]->content)*sizeof(char));
+	    strcpy(name_exp->var_name, lexeme_list[*index]->content);
+	    arr_top++;
+	    if (arr_top > 0)  {
+	       NamedExpr** tmp1 = realloc(enum_def->constants,sizeof(NamedExpr*)*arr_top+1);
+	       Expr** tmp2 = realloc(enum_def->values,sizeof(Expr*)*arr_top+1);
+	       enum_def->constants = tmp1;
+	       enum_def->values = tmp2;
+	    }
+	    enum_def->constants[arr_top] = name_exp;
+	    enum_def->no_of_constants++;
+	    if (lexeme_list[(*index) + 1]->lexeme_type == COMMA)  {
+	      enum_def->values[arr_top] = NULL;
+	    } else if (lexeme_list[(*index) + 1]->lexeme_type == ASSIGNMENT_OP)  {
+	      (*index) += 2;
+	      if (lexeme_list[*index]->lexeme_type == DYNAMIC_LIST_LEFT_BRACE)  {
+		fprintf(stderr, "ParserError: invalid declaration of mutable object in enum\n");
+		exit(-1);
+	      }
+	      Expr* res_exp = parse_expression(lexeme_list,top,&(*index));
+	      enum_def->values[arr_top] = res_exp;
+	    } 
+	    (*index)++;
+	    break;
+	}
+      }
+    }
+    fprintf(stderr, "ParserError: missing token after enum declaration!");
+    exit(-1);
+  } 
+  fprintf(stderr, "P");
+  exit(-1);
+}
+
 VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *index,bool is_assignment_exp)  {
    *(index) = (is_assignment_exp)?(*index)+1:(*index);
    NamedExpr* named_expr = create_named_expr(lexeme_list[(*index)]->content);
@@ -545,7 +616,8 @@ VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *inde
 Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool inside_block){
   // bool inside_block (indicates whether )
   Statement** module = (Statement**)malloc(sizeof(Statement*)*top);
-  uint64_t m_top = -1, i = *offset;
+  int64_t m_top = -1;
+  uint64_t i = *offset;
   for (; i < top; i++)  {
     if (lexeme_list[i]->lexeme_type == RESERVED_WORD) {
       if (strcmp(lexeme_list[i]->content, RESERVED_WORD_VAR) == 0) {
@@ -564,13 +636,6 @@ Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool 
 	module[++m_top] = (Statement*)malloc(sizeof(Statement));
 	module[m_top]->expression_type = IF_CONDITIONAL;
 	module[m_top]->value.if_statement = if_statement;
-      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_DONE) == 0)  {
-	if (inside_block)  
-	  break;  // break if body is being parsed inside a scope (statement like if,for,while)!
-	else {
-	   fprintf(stderr, "ParserError: 'done' must be used to end the scope!\n");
-	   exit(1);
-	}
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_ELSE) == 0)  {
         if (inside_block) break;
 	else {
@@ -582,9 +647,13 @@ Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool 
 	module[++m_top] = malloc(sizeof(Statement));
 	module[m_top]->expression_type = FUNCTION_DEFINITION;
 	module[m_top]->value.func_def = fdef;
+      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_ENUM) == 0)  {
+	EnumDef* edef = parse_enum_definition(lexeme_list,top,&i);
+	module[++m_top] = (Statement*)malloc(sizeof(Statement));
+	module[m_top]->expression_type = ENUM_DEFINITION;
+	module[m_top]->value.enum_def = edef;
       }
-    }  
-    else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
+    } else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
      if (i+1 < top)  {
        if (lexeme_list[i+1]->lexeme_type == ASSIGNMENT_OP)  {
 	// create variable declaration instance, then !

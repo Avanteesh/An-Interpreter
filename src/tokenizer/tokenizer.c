@@ -25,6 +25,7 @@ static bool is_a_reserved_word(char* word)  {
   else if (strcmp(word, RESERVED_WORD_DONE) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_ELSE) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_FUNCDEF) == 0) return true;
+  else if (strcmp(word, RESERVED_WORD_ENUM) == 0) return true;
   return false;
 }
 
@@ -311,7 +312,7 @@ void tokenizer(Lexeme** lexeme_list, char* file_content, uint64_t *top)   {
 	     printf("BITWISE OR\n");
 	     lexeme_list[(*top)++] = created_lex;
 	   }
-	   break; 
+	   break;
 	case '+':
 	   created_lex = create_lexeme();
 	   created_lex->lexeme_type = PLUS_OP;
@@ -405,6 +406,18 @@ void tokenizer(Lexeme** lexeme_list, char* file_content, uint64_t *top)   {
 	   created_lex->content = NULL;
 	   lexeme_list[(*top)++] = created_lex;
 	   printf("SEMICOLON\n");
+	   break;
+	case '%':
+	   if (file_content[i + 1] == '{')  {
+	     created_lex = create_lexeme();
+	     created_lex->lexeme_type = MAP_BRACE;
+	     created_lex->content = NULL;
+	     lexeme_list[(*top)++] = created_lex;
+	     printf("MAP_BRACE_START\n");
+	   } else {
+	     fprintf(stderr, "LexicalError: invalid token %% \n");
+	     exit(-1);
+	   }
 	   break;
 	case '\n':
 	   created_lex = create_lexeme();
