@@ -4,6 +4,7 @@
 #include <string.h>
 #include "parser/parser.h"
 #include "tokenizer/tokenizer.h"
+#include "transpiler/transpiler.h"
 #include <regex.h>
 
 char* read_file_content(char* file)  {
@@ -47,7 +48,9 @@ int main(int argc, char* argv[])   {
     uint64_t top = 0;
     Lexeme** lexeme_list = malloc(sizeof(Lexeme*) * strlen(file_content)-2);
     tokenizer(lexeme_list, file_content, &top);
-    Statement** parse_tree = parse(lexeme_list, top);
+    ProgramBody* parse_tree = parse(lexeme_list, top);
+    // code generation .. LLVM IR
+    //CompiledCode* compiled = ast_traverser_and_transpiler(parse_tree);
   }
   return 0;
 }

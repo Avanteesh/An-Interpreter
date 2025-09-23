@@ -13,6 +13,8 @@ typedef struct StatementObj Statement;
 typedef struct IfStatementObj IfStatement;
 typedef struct FunctionDefObj FunctionDef;
 typedef struct EnumDefObj EnumDef;
+typedef struct AttributeObj Attribute_t;
+typedef struct ProgramBody_t ProgramBody;
 
 typedef enum {
   PLUS, MINUS, 
@@ -44,7 +46,8 @@ typedef enum {
   STRING, BOOL,
   DYNAMIC_LIST,
   HASH_MAP,
-  FUNCTION_CALL
+  FUNCTION_CALL,
+  ATTRIBUTE_LIST
 } ParsedToken;
 
 typedef enum {
@@ -89,8 +92,8 @@ typedef struct {
 
 typedef struct IfStatementObj {
   Expr* condition;
-  Statement** body;
-  Statement** else_body;
+  ProgramBody* body;
+  ProgramBody* else_body;
 } IfStatement;
 
 typedef struct EnumDefObj {
@@ -109,7 +112,7 @@ typedef struct FunctionDefObj {
   NamedExpr function_name;
   uint64_t arg_length;
   NamedExpr** arg_list;
-  Statement** body;
+  ProgramBody* body;
 } FunctionDef;
 
 typedef struct {
@@ -154,6 +157,10 @@ typedef struct StatementObj {
   } value;
 } Statement;  // every line of code is an some instruction!
 
+typedef struct ProgramBody_t {
+  uint64_t length;
+  Statement** statements;
+} ProgramBody;
 
 ArgumentObj* create_arg_object(ParsedToken p_token);
 IfStatement* parse_if_statement(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
@@ -171,8 +178,8 @@ FunctionDef* parse_function_definition(Lexeme** lexeme_list,uint64_t top,uint64_
 FunctionCall* parse_function_call(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
 DynamicList* parse_dynamic_list(Lexeme** lexeme_list, uint64_t top, uint64_t* index);
 Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t *index);
-Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t* offset, bool inside_block);
-Statement** parse(Lexeme** lexeme_list, uint64_t top);
+ProgramBody* body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t* offset, bool inside_block);
+ProgramBody* parse(Lexeme** lexeme_list, uint64_t top);
 
 #endif
 

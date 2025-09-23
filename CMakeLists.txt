@@ -13,6 +13,7 @@ include_directories(
     src/grammar
     src/tokenizer
     src/parser
+    src/transpiler
 )
 
 # Add the executable
@@ -21,5 +22,6 @@ add_executable(
     src/main.c
     src/tokenizer/tokenizer.c
     src/parser/parser.c
+    src/transpiler/transpiler.c
 )
 

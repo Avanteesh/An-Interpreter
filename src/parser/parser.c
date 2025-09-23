@@ -416,8 +416,9 @@ FunctionCall* parse_function_call(Lexeme** lexeme_list, uint64_t top,uint64_t *i
 	break;
       default:
        Expr* _expr = parse_expression(lexeme_list, top, &(*index));
-       if (lexeme_list[(*index)]->lexeme_type == SEMICOLON) 
+       if (lexeme_list[(*index)]->lexeme_type == SEMICOLON) { 
 	  (*index)--;
+       }
        f_call->arg_length++;
        arg_top++;
        if (arg_top > 0)  {
@@ -448,9 +449,10 @@ IfStatement* parse_if_statement(Lexeme** lexeme_list, uint64_t top,uint64_t* ind
   while (true)  {
     switch (lexeme_list[*index]->lexeme_type) {
       case RESERVED_WORD:
-	if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) == 0)
+	if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) == 0) {
 	  (*index)++;
 	  return if_statement;
+	}
         if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_IF) == 0)  {
 	  if_statement->body = body_parser(lexeme_list,top,&(*index),true);
 	}
@@ -613,29 +615,31 @@ VariableDec* parse_variable_dec(Lexeme** lexeme_list,uint64_t top,uint64_t *inde
    exit(-1);
 }
 
-Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool inside_block){
+ProgramBody* body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool inside_block){
   // bool inside_block (indicates whether )
-  Statement** module = (Statement**)malloc(sizeof(Statement*)*top);
+  ProgramBody* prog_body = malloc(sizeof(ProgramBody));
+  prog_body->statements = (Statement**)malloc(sizeof(Statement*)*top);
+  prog_body->length = 0;
   int64_t m_top = -1;
   uint64_t i = *offset;
   for (; i < top; i++)  {
     if (lexeme_list[i]->lexeme_type == RESERVED_WORD) {
       if (strcmp(lexeme_list[i]->content, RESERVED_WORD_VAR) == 0) {
        VariableDec* var_dec = parse_variable_dec(lexeme_list, top, &i, true);
-       module[++m_top] = (Statement*)malloc(sizeof(Statement));
-       module[m_top]->expression_type = VARIABLE_DEC;
-       module[m_top]->value.var_declaration = var_dec;
+       prog_body->statements[++m_top] = (Statement*)malloc(sizeof(Statement));
+       prog_body->statements[m_top]->expression_type = VARIABLE_DEC;
+       prog_body->statements[m_top]->value.var_declaration = var_dec;
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_CONST) == 0)  {
        VariableDec* const_dec = parse_variable_dec(lexeme_list, top, &i, true);
        const_dec->is_constant = true;
-       module[++m_top] = (Statement*)malloc(sizeof(Statement));
-       module[m_top]->expression_type = CONSTANT_DEC;  // CONSTANT declaration
-       module[m_top]->value.var_declaration = const_dec;
+       prog_body->statements[++m_top] = (Statement*)malloc(sizeof(Statement));
+       prog_body->statements[m_top]->expression_type = CONSTANT_DEC;  // CONSTANT declaration
+       prog_body->statements[m_top]->value.var_declaration = const_dec;
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_IF) == 0)  {
         IfStatement* if_statement = parse_if_statement(lexeme_list,top,&i);
-	module[++m_top] = (Statement*)malloc(sizeof(Statement));
-	module[m_top]->expression_type = IF_CONDITIONAL;
-	module[m_top]->value.if_statement = if_statement;
+	prog_body->statements[++m_top] = (Statement*)malloc(sizeof(Statement));
+	prog_body->statements[m_top]->expression_type = IF_CONDITIONAL;
+	prog_body->statements[m_top]->value.if_statement = if_statement;
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_ELSE) == 0)  {
         if (inside_block) break;
 	else {
@@ -644,14 +648,16 @@ Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool 
 	}
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_FUNCDEF) == 0)  {
 	FunctionDef* fdef = parse_function_definition(lexeme_list,top,&i);
-	module[++m_top] = malloc(sizeof(Statement));
-	module[m_top]->expression_type = FUNCTION_DEFINITION;
-	module[m_top]->value.func_def = fdef;
+	prog_body->statements[++m_top] = malloc(sizeof(Statement));
+	prog_body->statements[m_top]->expression_type = FUNCTION_DEFINITION;
+	prog_body->statements[m_top]->value.func_def = fdef;
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_ENUM) == 0)  {
 	EnumDef* edef = parse_enum_definition(lexeme_list,top,&i);
-	module[++m_top] = (Statement*)malloc(sizeof(Statement));
-	module[m_top]->expression_type = ENUM_DEFINITION;
-	module[m_top]->value.enum_def = edef;
+	prog_body->statements[++m_top] = (Statement*)malloc(sizeof(Statement));
+	prog_body->statements[m_top]->expression_type = ENUM_DEFINITION;
+	prog_body->statements[m_top]->value.enum_def = edef;
+      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_DONE) == 0)  {
+	break;
       }
     } else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
      if (i+1 < top)  {
@@ -664,18 +670,18 @@ Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool 
 	assignment_exp->value->p_tokens = var_dec->value->p_tokens;
         assignment_exp->value->value = var_dec->value->value;
 	free(var_dec);
-        module[++m_top] = (Statement*)malloc(sizeof(Statement));
-        module[m_top]->expression_type = ASSIGNMENT_EXP;
-        module[m_top]->value.assignment_exp = assignment_exp;
+        prog_body->statements[++m_top] = (Statement*)malloc(sizeof(Statement));
+        prog_body->statements[m_top]->expression_type = ASSIGNMENT_EXP;
+        prog_body->statements[m_top]->value.assignment_exp = assignment_exp;
        }
        else if (lexeme_list[i+1]->lexeme_type == LEFT_BRACE)  {
 	 FunctionCall* f_call = parse_function_call(lexeme_list,top,&i);
 	 Expr* exp_obj = malloc(sizeof(Expr));
 	 exp_obj->p_tokens = FUNCTION_CALL;
 	 exp_obj->value.function_call = f_call;
-	 module[++m_top] = (Statement*)malloc(sizeof(Statement));
-	 module[m_top]->expression_type = EXPRESSION;
-	 module[m_top]->value.expression = exp_obj;
+	 prog_body->statements[++m_top] = (Statement*)malloc(sizeof(Statement));
+	 prog_body->statements[m_top]->expression_type = EXPRESSION;
+	 prog_body->statements[m_top]->value.expression = exp_obj;
        }
      }
    } else if (lexeme_list[i]->lexeme_type == RETURN_OPERATOR)  {
@@ -689,19 +695,23 @@ Statement** body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool 
      } else {
 	i++;
 	return_obj->expression = parse_expression(lexeme_list,top,&i);
-	module[++m_top] = malloc(sizeof(Statement));
-	module[m_top]->expression_type = RETURN_EXPRESSION;
-	module[m_top]->value.return_obj = return_obj;
+	prog_body->statements[++m_top] = malloc(sizeof(Statement));
+	prog_body->statements[m_top]->expression_type = RETURN_EXPRESSION;
+	prog_body->statements[m_top]->value.return_obj = return_obj;
      }
    }
   }
+  //printf("LINE 701\n");
+  Statement** new_state = realloc(prog_body->statements, sizeof(Statement*)*(m_top+1));
+  prog_body->statements = new_state;
+  prog_body->length = m_top+1;
   *offset = i;
-  return module;
+  return prog_body;
 }
 
-Statement** parse(Lexeme** lexeme_list, uint64_t top)  {
+ProgramBody* parse(Lexeme** lexeme_list, uint64_t top)  {
   uint64_t offset = 0;
-  Statement** module = body_parser(lexeme_list, top, &offset, false);
-  return module;
+  ProgramBody* pb = body_parser(lexeme_list, top, &offset, false);
+  return pb;
 }
 
