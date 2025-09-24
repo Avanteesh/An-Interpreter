@@ -42,15 +42,18 @@ static void emit_constant_declaration(LLVMModuleRef module, LLVMContextRef conte
 
 static void emit_function_call(LLVMBuilderRef builder, FunctionCall* f_call)  {
   if (strcmp(f_call->function_name.var_name, "print") == 0) {
-    LLVMValueRef v_loaded = LLVMBuildAlloca(
+    LLVMValueRef x_alloca = LLVMBuildAlloca(
       builder, LLVMDoubleType(), 
       f_call->arg_list[0]->expression->value.named_expr.var_name
     );
-    /*
+    LLVMValueRef const_val = LLVMConstReal(
+     LLVMDoubleType(),atof(f_call->arg_list[0]->expression->value.named_expr.var_name)
+    );
+    LLVMBuildStore(builder, const_val, x_alloca);
     LLVMValueRef v_loaded = LLVMBuildLoad2(
-      builder, LLVMDoubleType(), 
-      x_alloca, f_call->arg_list[0]->expression->value.named_expr.var_name
-    );*/
+      builder,LLVMDoubleType(),x_alloca,
+      f_call->arg_list[0]->expression->value.named_expr.var_name
+    );
     LLVMValueRef fmt_str = LLVMBuildGlobalStringPtr(builder, "%f\n", "fmt");    
     LLVMValueRef args[] = { fmt_str, v_loaded };
     LLVMBuildCall2(builder, printf_type, printf_func, args, 2, "");
