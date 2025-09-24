@@ -2,12 +2,9 @@
 #define TRANSPILER_H
 
 #include "parser/parser.h"
+#include <llvm-c/Core.h>
 
-typedef struct {
-  char* llvm_ir_code;
-  uint64_t buffer_size;
-} TranspiledCode;
+LLVMModuleRef ast_llvm_emitter(ProgramBody* program_ast,char* file_name);
 
-TranspiledCode* ast_traverser_and_transpiler(ProgramBody* program_ast);
 #endif
 

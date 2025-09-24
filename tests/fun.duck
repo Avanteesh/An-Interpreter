@@ -1,24 +1,3 @@
-enum Colors do
-  RED, 
-  YELLOW, 
-  BLUE,
-  GREEN
-done
-
-funcdef factorial(n) do 
-  if n -leq 2 do 
-    |> n;  
-  else 
-    |> n * factorial(n - 1);
-  done
-done
-
-
-if 2 ^ num -eq 32 do
-  num <- num - 1;
-  print("hiii!! ", num);
-else
-  num <- num + 1;
-  print("Bye!");
-done 
+const PI <- 3.1415;
+var radius <- 5;
 
