@@ -34,6 +34,7 @@ typedef enum {
 #define RESERVED_WORD_ELSE "else"
 #define RESERVED_WORD_FUNCDEF "funcdef"
 #define RESERVED_WORD_ENUM "enum"
+#define RESERVED_WORD_UNTIL "until"
 
 #define NAMED_OPERATOR_MODULO "mod"
 #define NAMED_OPERATOR_AND "and"

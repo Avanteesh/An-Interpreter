@@ -26,6 +26,7 @@ static bool is_a_reserved_word(char* word)  {
   else if (strcmp(word, RESERVED_WORD_ELSE) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_FUNCDEF) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_ENUM) == 0) return true;
+  else if (strcmp(word, RESERVED_WORD_UNTIL) == 0) return true;
   return false;
 }
 

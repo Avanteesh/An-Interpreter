@@ -15,6 +15,7 @@ typedef struct FunctionDefObj FunctionDef;
 typedef struct EnumDefObj EnumDef;
 typedef struct AttributeObj Attribute_t;
 typedef struct ProgramBody_t ProgramBody;
+typedef struct UntilLoopObj UntilLoop;
 
 typedef enum {
   PLUS, MINUS, 
@@ -56,7 +57,8 @@ typedef enum {
   IF_CONDITIONAL, 
   FUNCTION_DEFINITION,
   RETURN_EXPRESSION,
-  ENUM_DEFINITION
+  ENUM_DEFINITION,
+  UNTIL_LOOP
 } ProgramSyntaxes;
 
 typedef struct {
@@ -115,6 +117,11 @@ typedef struct FunctionDefObj {
   ProgramBody* body;
 } FunctionDef;
 
+typedef struct UntilLoopObj {
+  Expr* condition;
+  ProgramBody* body;
+} UntilLoop;
+
 typedef struct {
   Expr* expression;
 } ReturnObj;
@@ -153,7 +160,8 @@ typedef struct StatementObj {
     IfStatement* if_statement;
     ReturnObj* return_obj;
     FunctionDef* func_def;
-    EnumDef* enum_def;  
+    EnumDef* enum_def; 
+    UntilLoop* until_loop;
   } value;
 } Statement;  // every line of code is an some instruction!
 
@@ -164,6 +172,7 @@ typedef struct ProgramBody_t {
 
 ArgumentObj* create_arg_object(ParsedToken p_token);
 IfStatement* parse_if_statement(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
+UntilLoop* parse_until_loopstatement(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
 void parse_exp_binary(Expr** expr_stack, int64_t* stack_top, Expr* exp_obj, Operators op);
 void parse_exp_unary(Expr** expr_stack,int64_t* stack_top,Expr* exp_obj,Operators op);
 uint64_t operator_precedance(Tokens token);

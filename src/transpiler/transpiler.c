@@ -5,11 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
-static LLVMTypeRef i32_type, double_type;
-static LLVMTypeRef i8_ptr_type, union_type;
-static LLVMTypeRef boxed_struct, boxed_ptr_type;
-static LLVMValueRef null_ptr;
+static LLVMTypeRef i32_type, double_type, i8_ptr_type, union_type;
+static LLVMTypeRef printf_arg_type, boxed_struct;
+static LLVMTypeRef boxed_ptr_type, printf_type;
+static LLVMValueRef printf_func, null_ptr;
 
 static void emit_var_declaration(LLVMContextRef context, LLVMBuilderRef builder, VariableDec* var_dec){
   LLVMValueRef variable = LLVMBuildAlloca(builder,boxed_struct,var_dec->target->var_name);
@@ -39,6 +40,23 @@ static void emit_constant_declaration(LLVMModuleRef module, LLVMContextRef conte
   }
 }
 
+static void emit_function_call(LLVMBuilderRef builder, FunctionCall* f_call)  {
+  if (strcmp(f_call->function_name.var_name, "print") == 0) {
+    LLVMValueRef v_loaded = LLVMBuildAlloca(
+      builder, LLVMDoubleType(), 
+      f_call->arg_list[0]->expression->value.named_expr.var_name
+    );
+    /*
+    LLVMValueRef v_loaded = LLVMBuildLoad2(
+      builder, LLVMDoubleType(), 
+      x_alloca, f_call->arg_list[0]->expression->value.named_expr.var_name
+    );*/
+    LLVMValueRef fmt_str = LLVMBuildGlobalStringPtr(builder, "%f\n", "fmt");    
+    LLVMValueRef args[] = { fmt_str, v_loaded };
+    LLVMBuildCall2(builder, printf_type, printf_func, args, 2, "");
+  }
+}
+
 LLVMModuleRef ast_llvm_emitter(ProgramBody* program_ast, char* file_name){
    LLVMContextRef context = LLVMContextCreate();
    LLVMModuleRef module = LLVMModuleCreateWithNameInContext(file_name,context);
@@ -53,6 +71,9 @@ LLVMModuleRef ast_llvm_emitter(ProgramBody* program_ast, char* file_name){
    boxed_struct = LLVMStructTypeInContext(
     context,(LLVMTypeRef[]){i32_type, union_type},2,false
    );
+   printf_arg_type = LLVMPointerType(LLVMInt8Type(), 0);
+   printf_type = LLVMFunctionType(LLVMInt32Type(), &printf_arg_type, 1,1);
+   printf_func = LLVMAddFunction(module, "printf", printf_type);   
    boxed_ptr_type = LLVMPointerType(boxed_struct, 0);
    LLVMTypeRef main_type = LLVMFunctionType(i8_ptr_type, NULL, 0,0);
    LLVMValueRef main_func = LLVMAddFunction(module, "main", main_type);
@@ -67,8 +88,14 @@ LLVMModuleRef ast_llvm_emitter(ProgramBody* program_ast, char* file_name){
 	case CONSTANT_DEC:
 	   emit_constant_declaration(module,context,builder,st->value.var_declaration);
 	   break;
+	case EXPRESSION:
+	   if (st->value.expression->p_tokens == FUNCTION_CALL)  {
+	     emit_function_call(builder,st->value.expression->value.function_call);
+	   }
+	   break;
      }
    }
+   LLVMBuildRet(builder, LLVMConstInt(LLVMInt32Type(), 0, 0));
    char* code = LLVMPrintModuleToString(module);
    printf("%s\n", code);
    return module;

@@ -433,6 +433,35 @@ FunctionCall* parse_function_call(Lexeme** lexeme_list, uint64_t top,uint64_t *i
   return f_call;
 }
 
+UntilLoop* parse_until_loopstatement(Lexeme** lexeme_list,uint64_t top,uint64_t* index) {
+  UntilLoop* until_loop = (UntilLoop*)malloc(sizeof(UntilLoop));
+  (*index)++;
+  until_loop->condition = parse_expression(lexeme_list,top,&(*index));
+  if (lexeme_list[*index]->lexeme_type == RESERVED_WORD)  {
+    if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DO) != 0)  {
+      fprintf(stderr, "ParserError: missing token 'do' after expression until\n");
+      exit(-1);
+    }
+  }
+  (*index)++;
+  while (true)  {
+    switch (lexeme_list[*index]->lexeme_type) {
+      default:
+	if (lexeme_list[*index]->lexeme_type == RESERVED_WORD) {
+	  if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) == 0) {
+	    (*index)++;
+	    return until_loop;
+	  }
+	}
+        until_loop->body = body_parser(lexeme_list,top,&(*index),true);
+        break;
+      case LINE_END:
+	(*index)++;
+	break;
+    }
+  }
+}
+
 IfStatement* parse_if_statement(Lexeme** lexeme_list, uint64_t top,uint64_t* index)  {
   // parsing if statements!
   IfStatement* if_statement = (IfStatement*)malloc(sizeof(IfStatement));
@@ -658,6 +687,11 @@ ProgramBody* body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool
 	prog_body->statements[m_top]->value.enum_def = edef;
       } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_DONE) == 0)  {
 	break;
+      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_UNTIL) == 0) {
+	UntilLoop* loop = parse_until_loopstatement(lexeme_list,top,&i);
+	prog_body->statements[++m_top] = malloc(sizeof(Statement));
+	prog_body->statements[m_top]->expression_type = UNTIL_LOOP;
+	prog_body->statements[m_top]->value.until_loop = loop;
       }
     } else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
      if (i+1 < top)  {
@@ -701,7 +735,6 @@ ProgramBody* body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool
      }
    }
   }
-  //printf("LINE 701\n");
   Statement** new_state = realloc(prog_body->statements, sizeof(Statement*)*(m_top+1));
   prog_body->statements = new_state;
   prog_body->length = m_top+1;
