@@ -7,6 +7,8 @@
 #include "transpiler/transpiler.h"
 #include <llvm-c/Core.h>
 #include <llvm-c/Analysis.h>
+#include <llvm-c/ExecutionEngine.h>
+#include <llvm-c/Target.h>
 #include <regex.h>
 
 char* read_file_content(char* file)  {
@@ -53,6 +55,11 @@ int main(int argc, char* argv[])   {
     ProgramBody* parse_tree = parse(lexeme_list, top);
     // code generation .. LLVM IR
     LLVMModuleRef compiled = ast_llvm_emitter(parse_tree, argv[2]);
+    char* module_ir = LLVMPrintModuleToString(compiled);
+    char* token = strtok(argv[2],".");
+    FILE* fout = fopen(strcat(token,".ll"),"w");
+    fprintf(fout, "%s", module_ir);
+    fclose(fout);
   }
   return 0;
 }

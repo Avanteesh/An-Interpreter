@@ -19,8 +19,12 @@ static void emit_var_declaration(LLVMContextRef context, LLVMBuilderRef builder,
       LLVMValueRef num = LLVMConstReal(
 	LLVMDoubleTypeInContext(context),atof(var_dec->value->value.constant_obj.value)
       );
-      LLVMValueRef var_ptr = LLVMBuildStructGEP2(builder,double_type,variable, 0,"var");
-      LLVMBuildStore(builder,num,var_ptr);
+      LLVMValueRef var_ptr =LLVMBuildStructGEP2(builder,boxed_struct,variable,1,"payload_ptr");
+      LLVMValueRef double_ptr = LLVMBuildStructGEP2(builder,union_type,var_ptr,0,"double_ptr");
+      LLVMBuildStore(builder, num, double_ptr);
+      LLVMValueRef tag_ptr = LLVMBuildStructGEP2(builder,boxed_struct,variable,0,"tag_ptr");
+      LLVMValueRef tag_val = LLVMConstInt(i32_type, 0, false);
+      LLVMBuildStore(builder, tag_val, tag_ptr);
       break;
   }
 }
@@ -42,6 +46,7 @@ static void emit_constant_declaration(LLVMModuleRef module, LLVMContextRef conte
 
 static void emit_function_call(LLVMBuilderRef builder, FunctionCall* f_call)  {
   if (strcmp(f_call->function_name.var_name, "print") == 0) {
+    printf("")
     LLVMValueRef x_alloca = LLVMBuildAlloca(
       builder, LLVMDoubleType(), 
       f_call->arg_list[0]->expression->value.named_expr.var_name
@@ -98,9 +103,7 @@ LLVMModuleRef ast_llvm_emitter(ProgramBody* program_ast, char* file_name){
 	   break;
      }
    }
-   LLVMBuildRet(builder, LLVMConstInt(LLVMInt32Type(), 0, 0));
-   char* code = LLVMPrintModuleToString(module);
-   printf("%s\n", code);
+   LLVMBuildRet(builder, LLVMConstNull(i8_ptr_type));
    return module;
 }
 
