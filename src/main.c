@@ -4,11 +4,11 @@
 #include <string.h>
 #include "parser/parser.h"
 #include "tokenizer/tokenizer.h"
-#include "transpiler/transpiler.h"
+/*#include "transpiler/transpiler.h"
 #include <llvm-c/Core.h>
 #include <llvm-c/Analysis.h>
 #include <llvm-c/ExecutionEngine.h>
-#include <llvm-c/Target.h>
+#include <llvm-c/Target.h>*/
 #include <regex.h>
 
 char* read_file_content(char* file)  {
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])   {
    fprintf(stderr, "ERROR: Invalid no arguments provided!\n");
    exit(-1);
   }
-  else if (strcmp(argv[1], "compile") == 0)  {
+  else if (strcmp(argv[1], "parse") == 0)  {
     if (argc < 3) {
       fprintf(stderr, "ERROR: No file provided\n");
       exit(-1);
@@ -54,12 +54,12 @@ int main(int argc, char* argv[])   {
     tokenizer(lexeme_list, file_content, &top);
     ProgramBody* parse_tree = parse(lexeme_list, top);
     // code generation .. LLVM IR
-    LLVMModuleRef compiled = ast_llvm_emitter(parse_tree, argv[2]);
+    /*LLVMModuleRef compiled = ast_llvm_emitter(parse_tree, argv[2]);
     char* module_ir = LLVMPrintModuleToString(compiled);
     char* token = strtok(argv[2],".");
     FILE* fout = fopen(strcat(token,".ll"),"w");
     fprintf(fout, "%s", module_ir);
-    fclose(fout);
+    fclose(fout);*/
   }
   return 0;
 }

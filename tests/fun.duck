@@ -1,5 +1,17 @@
-const PI <- 3.1415;
-var radius <- 5;
+const grade <- "A"
 
-print(radius);
+when grade do
+  "A" ->
+     print("excellent");;
+  "B" ->
+     print("very good!");;
+  "C" ->
+     print("above average!");;
+  "D" ->
+     print("average");;
+  "E" ->
+     print("below avg");;
+  "F" ->
+     print("fail!");;
+done
 

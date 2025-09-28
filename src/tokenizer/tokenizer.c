@@ -27,11 +27,12 @@ static bool is_a_reserved_word(char* word)  {
   else if (strcmp(word, RESERVED_WORD_FUNCDEF) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_ENUM) == 0) return true;
   else if (strcmp(word, RESERVED_WORD_UNTIL) == 0) return true;
+  else if (strcmp(word, RESERVED_WORD_WHEN) == 0) return true;
   return false;
 }
 
 static void tokenize_comparision_or_minus_op(Lexeme** list,uint64_t *l_top, char* file_data,uint64_t* index_ptr){
-  /* tokenizes operators, like (-gt, lt, -geq, -leq, -eq, -neq, - (MINUS) )*/
+  /* tokenizes operators, like (-gt, lt, -geq, -leq, -eq, -neq, - (MINUS), map*/
   Lexeme* created_lex = create_lexeme();
   if (file_data[(*index_ptr) + 1] == 'g')  {
     if (file_data[(*index_ptr) + 2] == 't')  {
@@ -46,13 +47,11 @@ static void tokenize_comparision_or_minus_op(Lexeme** list,uint64_t *l_top, char
 	  printf("GREATER_THAN_OR_EQUAL\n");
 	  created_lex->content = NULL;
 	  (*index_ptr) += 3;
-	}
-	else {
+	} else {
 	  fprintf(stderr, "LexicalError: Invalid token '%c'\n", file_data[(*index_ptr)+3]);
 	  exit(1);
 	}
-     }
-     else {
+     } else {
        fprintf(stderr, "LexicalError: Invalid token '%c'\n", file_data[(*index_ptr) + 2]);
        exit(1);
      }
@@ -69,13 +68,11 @@ static void tokenize_comparision_or_minus_op(Lexeme** list,uint64_t *l_top, char
 	  printf("LESS_THAN_OR_EQUAL\n");
 	  created_lex->content = NULL;
 	  (*index_ptr) += 3;
-	}
-	else {
+	} else {
 	  fprintf(stderr, "LexicalError: Invalid token: '%c'\n", file_data[(*index_ptr)+3]);
 	  exit(1);
 	}
-     }
-     else {
+     } else {
        fprintf(stderr, "LexicalError: Invalid token '%c'\n", file_data[(*index_ptr) + 2]);
        exit(1);
      }
@@ -101,8 +98,12 @@ static void tokenize_comparision_or_minus_op(Lexeme** list,uint64_t *l_top, char
       fprintf(stderr, "LexicalError: Invalid token '%c'\n", file_data[(*index_ptr) + 2]);
       exit(1);
     }
-  }
-  else {
+  } else if (file_data[(*index_ptr) + 1] == '>')  {
+     created_lex->lexeme_type = MAP_OPERATOR;
+     created_lex->content = NULL;
+     printf("MAP_OPERATOR\n");
+     (*index_ptr)++;
+  } else {
       created_lex->lexeme_type = MINUS_OP;
       created_lex->content = NULL;
       printf("MINUS_OP\n");

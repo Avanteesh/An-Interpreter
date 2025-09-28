@@ -11,6 +11,7 @@ typedef struct HashMapObj HashMap;
 typedef struct TypeFunctionCall FunctionCall;
 typedef struct StatementObj Statement;
 typedef struct IfStatementObj IfStatement;
+typedef struct WhenStatementObj WhenStatement;
 typedef struct FunctionDefObj FunctionDef;
 typedef struct EnumDefObj EnumDef;
 typedef struct AttributeObj Attribute_t;
@@ -40,25 +41,19 @@ typedef enum {
 } ConstantTypes;
 
 typedef enum {
-  BINARY_EXP,
-  UNARY_EXP,
-  NAMED_EXP,
-  EXPR, _NUMBER,
-  STRING, BOOL,
-  DYNAMIC_LIST,
-  HASH_MAP,
-  FUNCTION_CALL,
+  BINARY_EXP,UNARY_EXP,
+  NAMED_EXP, EXPR, _NUMBER,
+  STRING, BOOL,DYNAMIC_LIST,
+  HASH_MAP, FUNCTION_CALL,
   ATTRIBUTE_LIST
 } ParsedToken;
 
 typedef enum {
   VARIABLE_DEC, CONSTANT_DEC,
   ASSIGNMENT_EXP, EXPRESSION,
-  IF_CONDITIONAL, 
-  FUNCTION_DEFINITION,
-  RETURN_EXPRESSION,
-  ENUM_DEFINITION,
-  UNTIL_LOOP
+  IF_CONDITIONAL, FUNCTION_DEFINITION,
+  RETURN_EXPRESSION, ENUM_DEFINITION,
+  UNTIL_LOOP, WHEN_STATEMENT
 } ProgramSyntaxes;
 
 typedef struct {
@@ -97,6 +92,17 @@ typedef struct IfStatementObj {
   ProgramBody* body;
   ProgramBody* else_body;
 } IfStatement;
+
+typedef struct {
+ Expr* pattern;
+ ProgramBody* body;
+} MatchCase;
+
+typedef struct WhenStatementObj {
+  Expr* pattern;
+  uint64_t no_of_cases;
+  MatchCase** cases;
+} WhenStatement;
 
 typedef struct EnumDefObj {
   NamedExpr enum_name;
@@ -162,6 +168,7 @@ typedef struct StatementObj {
     FunctionDef* func_def;
     EnumDef* enum_def; 
     UntilLoop* until_loop;
+    WhenStatement* when_statement;
   } value;
 } Statement;  // every line of code is an some instruction!
 
@@ -173,6 +180,7 @@ typedef struct ProgramBody_t {
 ArgumentObj* create_arg_object(ParsedToken p_token);
 IfStatement* parse_if_statement(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
 UntilLoop* parse_until_loopstatement(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
+WhenStatement* parse_when_stment(Lexeme** lexeme_list,uint64_t top,uint64_t* index);
 void parse_exp_binary(Expr** expr_stack, int64_t* stack_top, Expr* exp_obj, Operators op);
 void parse_exp_unary(Expr** expr_stack,int64_t* stack_top,Expr* exp_obj,Operators op);
 uint64_t operator_precedance(Tokens token);

@@ -12,6 +12,28 @@ static LLVMTypeRef printf_arg_type, boxed_struct;
 static LLVMTypeRef boxed_ptr_type, printf_type;
 static LLVMValueRef printf_func, null_ptr;
 
+static Expr* resolve_binary_expression(LLVMContextRef context,LLVMBuilderRef builder,Expr* expr){
+  if (expr->p_tokens == BINARY_EXP)  {
+    Operators op = expr->value.binary_exp->operation;
+    Expr* left_exp = resolve_binary_expression(context, builder, expr->value.binary_exp->left);
+    Expr* right_exp = resolve_binary_expression(context, builder,expr->value.binary_exp->right);
+    LLVMValueRef left_ref, right_ref, result;
+    if (left_exp->p_tokens == _NUMBER) {
+      left_ref = LLVMConstDouble(double_type, atof(left_exp->value.constant_obj.value));
+    } 
+    if (right_exp->p_tokens == _NUMBER) {
+      right_ref = LLVMConstDouble(double_type, atof(right_exp->value.constant_obj.value));
+    }
+    switch(op)  {
+      case PLUS:
+	result = LLVMBuildAdd(builder, left_ref, right_ref, "add_res");
+	break;
+    }
+  } else if (expr->p_tokens == _NUMBER || expr->p_tokens == STRING || expr->p_tokens == NAMED_EXP) {
+    return expr;
+  } 
+}
+
 static void emit_var_declaration(LLVMContextRef context, LLVMBuilderRef builder, VariableDec* var_dec){
   LLVMValueRef variable = LLVMBuildAlloca(builder,boxed_struct,var_dec->target->var_name);
   switch(var_dec->value->p_tokens)  {
@@ -40,13 +62,13 @@ static void emit_constant_declaration(LLVMModuleRef module, LLVMContextRef conte
       LLVMValueRef union_const = LLVMConstStruct((LLVMValueRef[]){double_const, null_ptr},2,false);
       LLVMValueRef struct_const = LLVMConstStruct((LLVMValueRef[]){tag_const, union_const},2,false);      
       LLVMSetInitializer(global_const, struct_const);
+      LLVMBuildStore(builder, tag_const, global_const);
       break;
   }
 }
 
 static void emit_function_call(LLVMBuilderRef builder, FunctionCall* f_call)  {
   if (strcmp(f_call->function_name.var_name, "print") == 0) {
-    printf("")
     LLVMValueRef x_alloca = LLVMBuildAlloca(
       builder, LLVMDoubleType(), 
       f_call->arg_list[0]->expression->value.named_expr.var_name

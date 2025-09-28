@@ -224,11 +224,11 @@ Expr* parse_expression(Lexeme** lexeme_list, uint64_t top, uint64_t* index)  {
   TokenizedObject* post_exp = malloc(sizeof(TokenizedObject)*top);
   int64_t stack_top = -1, post_top = -1;
   while (true)  {
-    if (lexeme_list[*index]->lexeme_type == SEMICOLON || lexeme_list[*index]->lexeme_type == LINE_END || lexeme_list[*index]->lexeme_type == COMMA)  {
+    if (lexeme_list[*index]->lexeme_type == SEMICOLON || lexeme_list[*index]->lexeme_type == LINE_END || lexeme_list[*index]->lexeme_type == COMMA || lexeme_list[*index]->lexeme_type == MAP_OPERATOR)  {
        break;
     } else if (lexeme_list[*index]->lexeme_type == RESERVED_WORD) {
-      if (strcmp(lexeme_list[*index]->content, "do") == 0) break;
-      else if (strcmp(lexeme_list[*index]->content, "done") == 0) break;
+      if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DO) == 0) break;
+      else if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) == 0) break;
     } else if (lexeme_list[*index]->lexeme_type == NUMBER || lexeme_list[*index]->lexeme_type == STRING_LITERAL)  {
       post_exp[++post_top].is_tokenized = false;
       post_exp[post_top].value.token = lexeme_list[(*index)++];
@@ -509,10 +509,51 @@ IfStatement* parse_if_statement(Lexeme** lexeme_list, uint64_t top,uint64_t* ind
   return if_statement;
 }
 
+WhenStatement* parse_when_stment(Lexeme** lexeme_list,uint64_t top,uint64_t* index){
+  WhenStatement* when_st = (WhenStatement*)malloc(sizeof(WhenStatement));
+  when_st->no_of_cases = 0;
+  when_st->cases = (MatchCase**)malloc(sizeof(MatchCase*));
+  int64_t arg_top = -1;
+  (*index)++;
+  when_st->pattern = parse_expression(lexeme_list,top,&(*index));
+  if (lexeme_list[*index]->lexeme_type == RESERVED_WORD)  {
+    if (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DO) == 0) {
+      (*index)++;
+      bool exit = false;
+      while (!exit)   {
+        switch(lexeme_list[*index]->lexeme_type)  {
+	  case LINE_END:
+	   (*index)++;
+	   break;
+	  case RESERVED_WORD:
+	   exit = (strcmp(lexeme_list[*index]->content, RESERVED_WORD_DONE) == 0);
+	   break;
+	  default:
+	   MatchCase* m_case = malloc(sizeof(MatchCase));
+	   m_case->pattern = parse_expression(lexeme_list,top,&(*index));
+	   if (lexeme_list[*index]->lexeme_type == MAP_OPERATOR)  {
+	    (*index)++;
+	   }
+	   m_case->body = body_parser(lexeme_list,top,&(*index),true);
+	   arg_top++;
+	   when_st->no_of_cases++;
+	   if (arg_top > 0)  {
+	     MatchCase** _newcase = realloc(when_st->cases, sizeof(MatchCase)*arg_top+1);
+	     when_st->cases = _newcase;
+	   }
+	   when_st->cases[arg_top] = m_case;
+	   (*index)++;
+	}	
+      }
+    }
+  }
+  return when_st;
+}
+
 FunctionDef* parse_function_definition(Lexeme** lexeme_list,uint64_t top,uint64_t* index) {
   FunctionDef* fdef = (FunctionDef*)malloc(sizeof(FunctionDef));
   fdef->arg_length = 0;
-  uint64_t arg_top = -1;
+  int64_t arg_top = -1;
   (*index)++;
   if (lexeme_list[*index]->lexeme_type != NAMED_LEXEME)  {
     fprintf(stderr, "ParserError: Function Name missing!\n");
@@ -692,6 +733,11 @@ ProgramBody* body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool
 	prog_body->statements[++m_top] = malloc(sizeof(Statement));
 	prog_body->statements[m_top]->expression_type = UNTIL_LOOP;
 	prog_body->statements[m_top]->value.until_loop = loop;
+      } else if (strcmp(lexeme_list[i]->content, RESERVED_WORD_WHEN) == 0)  {
+	WhenStatement* when_st = parse_when_stment(lexeme_list,top,&i);
+	prog_body->statements[++m_top] = malloc(sizeof(Statement));
+	prog_body->statements[m_top]->expression_type = WHEN_STATEMENT;
+	prog_body->statements[m_top]->value.when_statement = when_st;
       }
     } else if (lexeme_list[i]->lexeme_type == NAMED_LEXEME)  {
      if (i+1 < top)  {
@@ -733,6 +779,9 @@ ProgramBody* body_parser(Lexeme** lexeme_list,uint64_t top,uint64_t *offset,bool
 	prog_body->statements[m_top]->expression_type = RETURN_EXPRESSION;
 	prog_body->statements[m_top]->value.return_obj = return_obj;
      }
+   } else if (lexeme_list[i]->lexeme_type == SEMICOLON)  {
+     if (lexeme_list[i - 1]->lexeme_type == SEMICOLON)  
+	break;
    }
   }
   Statement** new_state = realloc(prog_body->statements, sizeof(Statement*)*(m_top+1));

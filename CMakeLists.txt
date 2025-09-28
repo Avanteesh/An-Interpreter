@@ -29,7 +29,6 @@ set(SOURCES
     src/main.c
     src/tokenizer/tokenizer.c
     src/parser/parser.c
-    src/transpiler/transpiler.c
 )
 
 # Include paths
@@ -38,7 +37,6 @@ include_directories(
     src/grammar
     src/tokenizer
     src/parser
-    src/transpiler
 )
 
 # Add the executable

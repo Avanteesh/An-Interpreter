@@ -6,15 +6,22 @@
 #include <stdint.h>
 #include <llvm-c/Analysis.h>
 
-typedef struct {
-  LLVMValueRef value_ref;
-  char* symbol_name;
-} Symbol;
+typedef enum {
+  GLOBAL, LOCAL
+} Scopes;
+
+typedef enum {
+  VARIABLE,
+  CONSTANT,
+  FUNCTION
+} ParametricType;
 
 typedef struct {
-  uint64_t length;
-  Symbol** symbol_table;
-} SymbolTable;
+ char* name;
+ Scopes scope;
+ ParametricType type;
+ LLVMValueRef value_ref;
+} Symbol;
 
 LLVMModuleRef ast_llvm_emitter(ProgramBody* program_ast,char* file_name);
 
